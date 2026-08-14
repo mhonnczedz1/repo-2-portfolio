@@ -1,10 +1,15 @@
 """The quality bar is enforced, not advised. Each test breaks exactly one rule."""
+import contextlib
+import io
 import unittest
+from pathlib import Path
 
 from tests.helpers import FIXTURES, content
 from tools.check import (BUDGETS, TODO, TOTAL, check_banned, check_budgets, check_counts,
-                         check_decisions, check_diagram, check_schema, section_texts, warnings,
-                         words)
+                         check_decisions, check_diagram, check_output, check_schema, main,
+                         section_texts, warnings, words)
+
+ROOT = Path(__file__).resolve().parent.parent
 
 
 class WordCountTest(unittest.TestCase):
@@ -145,3 +150,61 @@ class WarningTest(unittest.TestCase):
             for n in tier["nodes"]:
                 n.pop("type", None)
         self.assertTrue(any("tier" in w for w in warnings(c)))
+
+
+class OutputTest(unittest.TestCase):
+    def _write(self, body: str) -> Path:
+        path = ROOT / "out" / "test-selfcontained.html"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body, encoding="utf-8")
+        self.addCleanup(path.unlink)
+        return path
+
+    def test_clean_output_passes(self):
+        path = self._write('<html><body><a href="https://example.com">repo</a>'
+                           '<img src="data:image/png;base64,AAA"></body></html>')
+        self.assertEqual(check_output(path), [])
+
+    def test_remote_image_fails(self):
+        path = self._write('<img src="https://cdn.example.com/a.png">')
+        self.assertTrue(any("src" in x for x in check_output(path)))
+
+    def test_stylesheet_link_fails(self):
+        path = self._write('<link rel="stylesheet" href="style.css">')
+        self.assertTrue(any("link" in x.lower() for x in check_output(path)))
+
+    def test_css_import_fails(self):
+        path = self._write("<style>@import url(other.css);</style>")
+        self.assertTrue(any("import" in x.lower() for x in check_output(path)))
+
+    def test_remote_url_in_css_fails(self):
+        path = self._write("<style>body{ background:url(https://x.test/a.png) }</style>")
+        self.assertTrue(any("url" in x.lower() for x in check_output(path)))
+
+    def test_an_anchor_to_a_repo_is_allowed(self):
+        path = self._write('<a href="https://github.com/me/proj">source</a>')
+        self.assertEqual(check_output(path), [])
+
+
+class CliTest(unittest.TestCase):
+    SLUG = "multi-tenant-rag-api"
+
+    def _run(self, *argv) -> tuple:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = main([*argv])
+        return code, buf.getvalue()
+
+    def test_the_worked_example_passes(self):
+        code, out = self._run(self.SLUG)
+        self.assertEqual(code, 0, out)
+        self.assertIn("architecture", out)
+
+    def test_strict_mode_fails_on_outstanding_todos(self):
+        code, out = self._run(self.SLUG, "--strict")
+        self.assertEqual(code, 1)
+        self.assertIn("TODO", out)
+
+    def test_unknown_slug_is_an_error_not_a_crash(self):
+        code, _ = self._run("no-such-project")
+        self.assertEqual(code, 1)

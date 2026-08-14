@@ -152,3 +152,76 @@ def warnings(c: dict) -> list:
         if not 3 <= n <= 5:
             out.append(f"tier {i} ({tier.get('label')}): {n} nodes, 3 to 5 reads best")
     return out
+
+
+SIZE_WARN = 3 * 1024 * 1024
+REMOTE = re.compile(r'\ssrc\s*=\s*["\'](?:https?:)?//', re.I)
+IMPORT = re.compile(r"@import", re.I)
+CSS_URL = re.compile(r"url\(\s*['\"]?(?:https?:)?//", re.I)
+
+
+def check_output(path: Path) -> list:
+    """The artifact must fetch nothing to render itself. Anchors are fine."""
+    doc = path.read_text(encoding="utf-8")
+    out = []
+    if REMOTE.search(doc):
+        out.append("output: a remote src would break the file once it is shared")
+    if re.search(r"<link\b", doc, re.I):
+        out.append("output: a <link> element means the stylesheet is not inlined")
+    if IMPORT.search(doc):
+        out.append("output: an @import fetches CSS at open time")
+    if CSS_URL.search(doc):
+        out.append("output: a remote url(...) in CSS fetches at open time")
+    return out
+
+
+def report(slug: str, strict: bool = False) -> int:
+    base = ROOT / "overviews" / slug
+    src = base / "content.json"
+    if not src.is_file():
+        print(f"no content at {src}")
+        return 1
+    c = json.loads(src.read_text(encoding="utf-8"))
+
+    print(f"\n{src}")
+    counts = {name: words(*texts) for name, texts in section_texts(c).items()}
+    for name, budget in BUDGETS.items():
+        flag = "  over" if counts[name] > budget else ""
+        print(f"  {name:<13}{counts[name]:>4} / {budget}{flag}")
+    print(f"  {'total':<13}{sum(counts.values()):>4} / {TOTAL}")
+
+    errors = (check_schema(c) + check_budgets(c) + check_banned(c)
+              + check_decisions(c) + check_diagram(c, base) + check_counts(c))
+
+    out = ROOT / "out" / f"overview-{slug}.html"
+    if out.is_file():
+        errors += check_output(out)
+        size = out.stat().st_size
+        print(f"  output        {size / 1024:.0f}KB")
+        if size > SIZE_WARN:
+            print("  warning: over 3MB is awkward to send. Downscale the screenshots:")
+            print(f"    sips -Z 1200 {base / 'images'}/*.png")
+
+    notes = warnings(c)
+    for w in notes:
+        print(f"  warning: {w}")
+    for x in errors:
+        print(f"  FAIL {x}")
+
+    if strict and any("TODO" in w for w in notes):
+        print("  FAIL strict: unresolved TODO(verify) claims block sending")
+        return 1
+    return 1 if errors else 0
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description="Validate a project overview.")
+    ap.add_argument("slug", help="directory name under overviews/")
+    ap.add_argument("--strict", action="store_true",
+                    help="also fail on unresolved TODO(verify), the gate before sending")
+    a = ap.parse_args(argv)
+    return report(a.slug, a.strict)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
