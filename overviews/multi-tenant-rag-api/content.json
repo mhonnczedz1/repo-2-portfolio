@@ -1,0 +1,68 @@
+{
+  "slug": "multi-tenant-rag-api",
+  "title": "Multi-Tenant RAG Documents API",
+  "tagline": "A question-answering service where separate teams upload their own documents and query only their own.",
+  "chips": [
+    {"label": "Role", "value": "solo build"},
+    {"label": "Timeline", "value": "Aug 2026"},
+    {"label": "Status", "value": "working prototype, self-hosted"},
+    {"label": "Scale", "value": "TODO(verify) documents ingested"},
+    {"label": "Stack", "value": "FastAPI, ChromaDB, Ollama, Python"}
+  ],
+  "result": "Fully self-hosted: chunking, embedding, retrieval and generation all run on the host, so tenant documents never leave the machine.",
+  "problem": [
+    "Teams sit on piles of internal documents they cannot search by meaning, and pasting them into a hosted chat tool moves private material off-premise. Most retrieval examples assume one corpus and one user, so two teams sharing an instance would read each other's files."
+  ],
+  "architecture": [
+    "`/ingest` takes a document and a namespace, splits the text into overlapping chunks so a passage spanning a boundary stays retrievable, embeds each chunk with a local Ollama model, and writes the vectors into ChromaDB scoped to that namespace. `/ask` embeds the question, retrieves the closest chunks within a single namespace, and hands them plus the session's recent turns to the local generation model.",
+    "Namespace is required on both paths, so a cross-tenant read is not a permission check that can be misconfigured; it is a query that cannot be expressed. Chunking and retrieval are deterministic Python and the model is called only twice, to embed and to answer, so a wrong answer stays traceable to the chunks it cited."
+  ],
+  "diagram": {
+    "mode": "kit",
+    "legend": ["ext", "ai", "store"],
+    "caption": "Both model calls stay local; the namespace narrows retrieval before generation.",
+    "tiers": [
+      {"label": "Ingest", "nodes": [
+        {"text": "Client", "note": "HTTP upload", "type": "ext"},
+        {"text": "FastAPI service", "note": "/ingest, /ask", "type": "core"},
+        {"text": "Chunker", "note": "overlapping split"}
+      ]},
+      {"label": "Index", "nodes": [
+        {"text": "Embedding model", "note": "Ollama, local", "type": "ai"},
+        {"text": "ChromaDB", "note": "one namespace per tenant", "type": "store"}
+      ]},
+      {"label": "Answer", "nodes": [
+        {"text": "Retrieval", "note": "top-k, namespace-scoped"},
+        {"text": "Generation model", "note": "Ollama, local", "type": "ai"},
+        {"text": "Chat UI", "note": "per-session history", "type": "ext"}
+      ]}
+    ]
+  },
+  "shots": [
+    {"src": "images/01-ingest.png",
+     "caption": "Ingest returns chunk count and namespace, the two things needed to debug a bad answer."},
+    {"src": "images/02-namespaces.png",
+     "caption": "The same question in two namespaces returns answers from each tenant's own documents only."}
+  ],
+  "decisions": [
+    {"chose": "Namespaces", "over": "a collection per tenant",
+     "because": "one warm index instead of many, and isolation becomes a property of the query rather than a setting someone can get wrong."},
+    {"chose": "Local Ollama", "over": "a hosted model API",
+     "because": "no per-token cost and no document leaves the host, accepting slower generation and manual model management."},
+    {"chose": "Overlapping chunks", "over": "clean splits",
+     "because": "duplicated tokens in the index, but answers stop being cut off at paragraph boundaries."},
+    {"chose": "Per-session retention", "over": "a conversation store",
+     "because": "follow-ups work with no schema to maintain, at the cost of losing history on restart."}
+  ],
+  "impact": [
+    "Stateless retrieval endpoints became a usable conversation: upload over HTTP, then ask follow-ups in the bundled interface without restating context. The isolation model is the reusable part, the problem row-level security solves in a relational database, handled at the vector layer and skipped by most retrieval examples. TODO(verify) ingest volume and median answer latency from local runs."
+  ],
+  "limits": [
+    "Single node, no authentication on either endpoint, and sessions live in memory. Next: an API key per namespace."
+  ],
+  "footer": {
+    "name": "Mhonn Czedrick Ybañez",
+    "email": "you@example.com",
+    "link": "repo link"
+  }
+}

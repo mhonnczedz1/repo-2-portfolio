@@ -158,3 +158,33 @@ class MetricsTest(unittest.TestCase):
 
     def test_grid_vanishes_without_numbers(self):
         self.assertEqual(render_metrics([]), "")
+
+
+class InlineCodeTest(unittest.TestCase):
+    def test_backticks_become_code_elements(self):
+        out = render_prose("Architecture", ["`/ingest` takes a document."])
+        self.assertIn("<p><code>/ingest</code> takes a document.</p>", out)
+
+    def test_markup_in_content_is_still_escaped(self):
+        out = render_prose("Problem", ["<script>alert(1)</script>"])
+        self.assertIn("&lt;script&gt;", out)
+        self.assertNotIn("<script>", out)
+
+    def test_an_unpaired_backtick_is_left_alone(self):
+        self.assertIn("<p>a ` b</p>", render_prose("Problem", ["a ` b"]))
+
+
+class LegendTest(unittest.TestCase):
+    def test_legend_lists_only_the_types_asked_for(self):
+        out = render_diagram({**TWO_TIER, "legend": ["ext", "ai", "store"]}, FIXTURES)
+        self.assertIn('<span class="l-ext">third party</span>', out)
+        self.assertIn('<span class="l-store">datastore</span>', out)
+        self.assertNotIn("<span>own component</span>", out)
+
+    def test_own_component_is_available_as_a_type(self):
+        out = render_diagram({**TWO_TIER, "legend": ["own", "ext"]}, FIXTURES)
+        self.assertIn("<span>own component</span>", out)
+
+    def test_no_legend_key_means_no_legend(self):
+        d = {k: v for k, v in TWO_TIER.items() if k != "legend"}
+        self.assertNotIn('class="legend"', render_diagram(d, FIXTURES))

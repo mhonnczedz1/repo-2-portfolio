@@ -12,6 +12,7 @@ import argparse
 import base64
 import html
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -35,6 +36,15 @@ def e(text) -> str:
     return html.escape(str(text), quote=True)
 
 
+def prose(text) -> str:
+    """Escape a paragraph, then honour `backticks` as inline code.
+
+    content.json stays free of markup: backticks are notation, the same way they are
+    in markdown, and nothing else in the string is interpreted.
+    """
+    return re.sub(r"`([^`]+)`", r"<code>\1</code>", e(text))
+
+
 def render_header(c: dict) -> str:
     chips = "\n".join(
         f'  <li class="chip"><b>{e(ch["label"])}</b> {e(ch["value"])}</li>'
@@ -53,7 +63,7 @@ def render_prose(heading: str, paragraphs, pre: str = "", post: str = "") -> str
     chunks = ["<section>", f"  <h2>{e(heading)}</h2>"]
     if pre:
         chunks.append(pre)
-    chunks += [f"  <p>{e(p)}</p>" for p in paragraphs]
+    chunks += [f"  <p>{prose(p)}</p>" for p in paragraphs]
     if post:
         chunks.append(post)
     chunks.append("</section>")
@@ -88,6 +98,24 @@ def figure(inner: str, caption: str) -> str:
     return f"  <figure>\n{inner}{cap}\n  </figure>"
 
 
+# What each legend entry explains. Only the types a diagram actually uses are worth listing.
+LEGEND = {"own": ("", "own component"), "ext": ("l-ext", "third party"),
+          "ai": ("l-ai", "model step"), "store": ("l-store", "datastore")}
+
+
+def render_legend(legend) -> str:
+    """A legend from a list of node types. True means all of them, absent means none."""
+    if not legend:
+        return ""
+    kinds = list(LEGEND) if legend is True else list(legend)
+    rows = []
+    for kind in kinds:
+        cls, label = LEGEND[kind]
+        rows.append(f'        <span class="{cls}">{label}</span>' if cls
+                    else f"        <span>{label}</span>")
+    return '\n      <div class="legend">\n' + "\n".join(rows) + "\n      </div>"
+
+
 def render_diagram(d: dict, base: Path) -> str:
     if d.get("mode") == "image":
         uri = data_uri(base / d["image"])
@@ -109,13 +137,7 @@ def render_diagram(d: dict, base: Path) -> str:
         rows.append(f'      <div class="tier" data-label="{e(tier["label"])}">\n'
                     + "\n".join(nodes) + "\n      </div>")
 
-    legend = ('\n      <div class="legend">\n'
-              "        <span>own component</span>\n"
-              '        <span class="l-ext">third party</span>\n'
-              '        <span class="l-ai">model step</span>\n'
-              '        <span class="l-store">datastore</span>\n'
-              "      </div>") if d.get("legend") else ""
-
+    legend = render_legend(d.get("legend"))
     return figure('    <div class="arch">\n' + "\n".join(rows) + legend + "\n    </div>",
                   d.get("caption", ""))
 
