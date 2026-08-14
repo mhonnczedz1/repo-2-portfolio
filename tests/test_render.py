@@ -2,7 +2,7 @@
 import unittest
 from pathlib import Path
 
-from tools.render import e, render, render_footer, render_header, render_prose
+from tools.render import e, render, render_diagram, render_footer, render_header, render_prose
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -71,3 +71,52 @@ class RenderDocumentTest(unittest.TestCase):
     def test_no_backgrounds_variant_neutralises_fills(self):
         variant = render(CONTENT, ROOT / "tests" / "fixtures", no_backgrounds=True)
         self.assertIn("background:transparent !important", variant)
+
+
+TWO_TIER = {
+    "mode": "kit", "caption": "Retrieval is deterministic.", "legend": True,
+    "tiers": [
+        {"label": "Ingest", "nodes": [
+            {"text": "Client", "note": "upload / HTTP", "type": "ext"},
+            {"text": "API layer", "note": "FastAPI", "type": "core"}]},
+        {"label": "Reason", "nodes": [
+            {"text": "Embed", "note": "Ollama", "type": "ai"},
+            {"text": "Index", "note": "ChromaDB", "type": "store"},
+            {"text": "Merge", "note": None}]},
+    ],
+}
+
+
+class DiagramTest(unittest.TestCase):
+    def setUp(self):
+        self.out = render_diagram(TWO_TIER, ROOT / "tests" / "fixtures")
+
+    def test_node_types_become_classes(self):
+        self.assertIn('<div class="node ext">Client<span class="note">upload / HTTP</span></div>',
+                      self.out)
+        self.assertIn('<div class="node core">API layer', self.out)
+
+    def test_untyped_node_is_a_plain_node_with_no_note(self):
+        self.assertIn('<div class="node">Merge</div>', self.out)
+
+    def test_tier_label_rides_on_the_data_attribute(self):
+        self.assertIn('<div class="tier" data-label="Ingest">', self.out)
+
+    def test_arrows_go_between_nodes_and_between_tiers(self):
+        self.assertEqual(self.out.count('<span class="arrow">&rarr;</span>'), 3)
+        self.assertEqual(self.out.count('<span class="arrow down">&darr;</span>'), 1)
+
+    def test_legend_is_opt_in(self):
+        self.assertIn('<div class="legend">', self.out)
+        self.assertNotIn('<div class="legend">',
+                         render_diagram({**TWO_TIER, "legend": False},
+                                        ROOT / "tests" / "fixtures"))
+
+    def test_caption_is_numbered(self):
+        self.assertIn("<b>Fig 1.</b> Retrieval is deterministic.", self.out)
+
+    def test_image_mode_missing_file_degrades_to_a_named_slot(self):
+        out = render_diagram({"mode": "image", "image": "architecture.png", "caption": "c"},
+                             ROOT / "tests" / "fixtures")
+        self.assertIn('<div class="slot">architecture.png</div>', out)
+        self.assertNotIn("<img", out)

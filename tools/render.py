@@ -73,8 +73,51 @@ def render_footer(f: dict) -> str:
             "</footer>")
 
 
+def data_uri(path: Path) -> str | None:
+    """A base64 data URI for an image, or None when the file is not there."""
+    if not path.is_file():
+        return None
+    mime = MIME.get(path.suffix.lower())
+    if mime is None:
+        raise SystemExit(f"unsupported image type: {path.name}")
+    return f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+
+
+def figure(inner: str, caption: str) -> str:
+    cap = f'\n    <figcaption><b>Fig 1.</b> {e(caption)}</figcaption>' if caption else ""
+    return f"  <figure>\n{inner}{cap}\n  </figure>"
+
+
 def render_diagram(d: dict, base: Path) -> str:
-    return ""      # Task 3
+    if d.get("mode") == "image":
+        uri = data_uri(base / d["image"])
+        inner = (f'    <img src="{uri}" alt="Architecture diagram">' if uri
+                 else f'    <div class="slot">{e(d["image"])}</div>')
+        return figure(inner, d.get("caption", ""))
+
+    rows = []
+    for i, tier in enumerate(d["tiers"]):
+        if i:
+            rows.append('      <span class="arrow down">&darr;</span>')
+        nodes = []
+        for j, n in enumerate(tier["nodes"]):
+            if j:
+                nodes.append('        <span class="arrow">&rarr;</span>')
+            cls = "node" + (f' {n["type"]}' if n.get("type") else "")
+            note = f'<span class="note">{e(n["note"])}</span>' if n.get("note") else ""
+            nodes.append(f'        <div class="{cls}">{e(n["text"])}{note}</div>')
+        rows.append(f'      <div class="tier" data-label="{e(tier["label"])}">\n'
+                    + "\n".join(nodes) + "\n      </div>")
+
+    legend = ('\n      <div class="legend">\n'
+              "        <span>own component</span>\n"
+              '        <span class="l-ext">third party</span>\n'
+              '        <span class="l-ai">model step</span>\n'
+              '        <span class="l-store">datastore</span>\n'
+              "      </div>") if d.get("legend") else ""
+
+    return figure('    <div class="arch">\n' + "\n".join(rows) + legend + "\n    </div>",
+                  d.get("caption", ""))
 
 
 def render_shots(shots, base: Path) -> str:
