@@ -71,6 +71,13 @@ python3 tools/check.py <slug>
 
 Fix what `check.py` reports and re-render. The loop is cheap because nothing regenerates markup.
 
+A flow diagram is hand-authored, so check its geometry while drafting it. `check.py` runs the same
+pass, but this prints the slack on every label, which is what you need to fix one:
+
+```sh
+python3 tools/svgcheck.py overviews/<slug>/images/architecture.svg
+```
+
 Before telling the user it is ready to send:
 
 ```sh
@@ -126,21 +133,9 @@ Content only. No markup. Backticks become inline `<code>`, which is the only for
     "Then the boundary that actually matters: isolation, retries, or the contract between stages. Say which steps are model-driven and which are deterministic code."
   ],
   "diagram": {
-    "mode": "kit",
-    "legend": ["ext", "ai", "store"],
-    "caption": "What the reader should notice, in one clause. Not a restatement of the boxes.",
-    "tiers": [
-      {"label": "Ingest", "nodes": [
-        {"text": "Client", "note": "HTTP upload", "type": "ext"},
-        {"text": "API", "note": "FastAPI", "type": "core"},
-        {"text": "Preprocess", "note": "deskew, crop"}
-      ]},
-      {"label": "Extract", "nodes": [
-        {"text": "OCR", "note": "Tesseract", "type": "ai"},
-        {"text": "Validate", "note": "deterministic checks"},
-        {"text": "Store", "note": "SQLite", "type": "store"}
-      ]}
-    ]
+    "mode": "image",
+    "image": "images/architecture.svg",
+    "caption": "What the reader should notice, in one clause. Not a restatement of the boxes."
   },
   "gallery": [
     {"src": "images/01-upload.png", "caption": "What this screen proves, in one sentence."},
@@ -174,9 +169,14 @@ Field notes:
   internal project, where "one of four, owned retrieval" tells the reader something. On a solo
   project spend the slot on `Scope` instead, since a portfolio one-pager already implies you
   built it.
-- **Node `type`** is `core` (the centerpiece, exactly one per diagram), `ext` (third party,
-  dashed), `store` (datastore, pill), `ai` (model step, accent), or omitted for something you
-  wrote.
+- **The diagram is a request flow.** Copy `references/architecture-template.svg` to
+  `overviews/<slug>/images/architecture.svg`, edit the labels, and declare it as `mode: "image"`.
+  Two lanes, one per request path, with any shared component drawn once. No legend: the node names
+  carry it. `references/diagram-flow.md` has the recipe, and `mode: "kit"` stays available for a
+  genuinely linear pipeline.
+- **Node `type`** applies to `mode: "kit"` only: `core` (the centerpiece, exactly one per diagram),
+  `ext` (third party, dashed), `store` (datastore, pill), `ai` (model step, accent), or omitted for
+  something you wrote. A flow SVG carries the same semantics as CSS classes.
 - **`note`** carries the tech or the payload, never a sentence.
 - **`footer.link`** renders as a clickable anchor only when it starts with `http`. The identity
   prints twice, in the header byline and the footer, and is budgeted for both.
@@ -184,7 +184,8 @@ Field notes:
 ## Word budget
 
 700 printed words hard, 699 budgeted. Everything that prints counts, including chip labels,
-diagram node labels, captions and the identity line. Fixed furniture the renderer emits does not
+diagram labels (every `<text>` inside a flow SVG, the same as kit node labels), captions and the
+identity line. Fixed furniture the renderer emits does not
 count: section headings, the `Fig 1.` prefix, the `WHAT IS IT?` label. `check.py` is the
 authority; this table is the guide for how to spend it.
 
@@ -211,7 +212,10 @@ Do not fight these, they are checked:
   a fact, not a decision.
 - Banned words, stem-matched, anywhere: `robust`, `seamless`, `cutting-edge`, `leverage`,
   `utilize`. Say what it actually does instead.
-- 12 diagram nodes maximum, 2 to 4 tiers, exactly one `core` node.
+- 12 diagram nodes maximum, 2 to 4 tiers, exactly one `core` node, in `mode: "kit"`.
+- A flow SVG must hold together geometrically: no label wider than its box, no overlapping labels
+  or boxes, nothing off canvas, and a `font-size` declared for every class it uses. Its `<text>`
+  labels count against the 55 word diagram budget, the same as kit node labels.
 - 5 chips maximum.
 - `gallery` holds 2 to 5 images, and no caption exceeds 14 words.
 - The rendered file must fetch nothing. The renderer guarantees this; do not add a `<link>`, an
@@ -221,4 +225,8 @@ Do not fight these, they are checked:
 
 - `references/section-briefs.md` for how to write each section, with weak versus strong examples.
   Read this before drafting prose.
-- `references/diagram-kit.md` for node types, tier rules, and when to fall back to an image.
+- `references/diagram-flow.md` for the default diagram: the two-lane request flow, its fixed
+  geometry, the label rules, and the geometry check. Read this before drawing.
+- `references/architecture-template.svg` is the flow diagram to copy and edit.
+- `references/diagram-kit.md` for the linear fallback: node types, tier rules, and the PNG escape
+  hatch.

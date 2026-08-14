@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 120" width="300" height="120"
+     role="img" aria-label="Minimal two-node flow, used to exercise the geometry checker.">
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+    .t{font-size:13px;font-weight:600;fill:#16181d}
+    .s{font-size:10.5px;fill:#6b7280}
+    .lane{font-size:10px;font-weight:700;fill:#6b7280;letter-spacing:.09em}
+    .elab{font-size:10px;fill:#6b7280}
+    .ext{fill:#f6f8fa;stroke:#b9c0c9;stroke-width:1;stroke-dasharray:4 3}
+    .core{fill:#fff;stroke:#16181d;stroke-width:1.8}
+    .edge{fill:none;stroke:#6b7280;stroke-width:1.2}
+  </style>
+  <rect x="0.5" y="0.5" width="299" height="119" rx="7" fill="#fcfdfe" stroke="#d7dbe0"/>
+
+  <text class="lane" x="24" y="20">PATH</text>
+
+  <rect class="ext" x="24" y="30" width="100" height="40" rx="6"/>
+  <text class="t" x="36" y="47">client</text>
+  <text class="s" x="36" y="61">upload</text>
+
+  <rect class="core" x="160" y="30" width="110" height="40" rx="6"/>
+  <text class="t" x="172" y="47">API</text>
+  <text class="s" x="172" y="61">FastAPI</text>
+
+  <path class="edge" d="M128,50 L156,50"/>
+  <text class="elab" x="130" y="95">write</text>
+</svg>

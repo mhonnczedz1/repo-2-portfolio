@@ -1,7 +1,16 @@
-# Diagram kit
+# Diagram kit, the linear fallback
 
-The architecture diagram is composed from CSS in `assets/style.css`. No external tools, no
-dependencies, it prints reliably, and every project ends up looking like part of the same set.
+**Read `references/diagram-flow.md` first.** A hand-authored flow SVG is the default, because most
+projects serve two request paths and share a component between them, which rows of boxes cannot
+express without asserting steps that do not exist.
+
+Use the kit when the system genuinely is one linear pipeline: a batch job, an ETL chain, a build
+pipeline. Nothing comes back to the caller, nothing is shared between paths, and each stage feeds
+the next. For that shape the kit is the better tool, because it is declarative and there is no
+geometry to get wrong.
+
+The kit is composed from CSS in `assets/style.css`. No external tools, no dependencies, it prints
+reliably, and every project using it ends up looking like part of the same set.
 
 You declare it as data in `content.json`. The renderer produces the markup.
 
@@ -85,8 +94,9 @@ in one clause. Not a restatement of the boxes.
 
 ## When to fall back to an image
 
-Use `"mode": "image"` only when the real topology needs crossing lines or a feedback loop that
-boxes and arrows in rows cannot express:
+Both other modes are images. For a request flow, which is the default, see
+`references/diagram-flow.md`. For a topology that needs crossing lines or a feedback loop that
+neither rows nor two lanes can express, draw it and point at the export:
 
 ```json
 "diagram": {
@@ -100,5 +110,5 @@ The file must exist in `overviews/<slug>/`, and `check.py` fails if it does not.
 base64 inlined like any screenshot, so the output stays self-contained. Keep the caption either
 way.
 
-Prefer the kit. A hand-drawn diagram is one more thing to keep in sync, and it will not match the
-other overviews in the set.
+A hand-drawn PNG is the last resort: it is one more thing to keep in sync, its text escapes the
+word budget, and its geometry cannot be checked. An SVG flow diagram is checked on both counts.

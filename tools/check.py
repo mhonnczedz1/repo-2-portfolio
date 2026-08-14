@@ -15,6 +15,11 @@ import re
 import sys
 from pathlib import Path
 
+try:                                    # imported as a package by the tests
+    from tools.svgcheck import check_svg, svg_words
+except ImportError:                     # run as a script, where tools/ is sys.path[0]
+    from svgcheck import check_svg, svg_words
+
 ROOT = Path(__file__).resolve().parent.parent
 
 BUDGETS = {"header": 60, "identity": 14, "problem": 75, "architecture": 190, "diagram": 55,
@@ -33,10 +38,17 @@ def words(*texts) -> int:
     return len(" ".join(str(t) for t in texts if t).replace(TODO, " ").split())
 
 
-def section_texts(c: dict) -> dict:
-    """Every string that prints, grouped by the budget line it belongs to."""
+def section_texts(c: dict, base: Path | None = None) -> dict:
+    """Every string that prints, grouped by the budget line it belongs to.
+
+    `base` resolves a flow diagram's SVG. Its labels print, so they are budgeted the same
+    way kit node labels are; without a base (most tests) the diagram line is caption only.
+    """
     d = c.get("diagram") or {}
     diagram = [d.get("caption", "")]
+    image = str(d.get("image") or "")
+    if base is not None and image.lower().endswith(".svg"):
+        diagram += svg_words(Path(base) / image)
     for tier in d.get("tiers", []):
         diagram.append(tier.get("label", ""))
         for n in tier.get("nodes", []):
@@ -72,9 +84,9 @@ def check_schema(c: dict) -> list:
     return out
 
 
-def check_budgets(c: dict) -> list:
+def check_budgets(c: dict, base: Path | None = None) -> list:
     out, total = [], 0
-    for name, texts in section_texts(c).items():
+    for name, texts in section_texts(c, base).items():
         n = words(*texts)
         total += n
         if n > BUDGETS[name]:
@@ -89,9 +101,9 @@ BANNED = re.compile(
 NODE_TYPES = {"core", "ext", "store", "ai"}
 
 
-def check_banned(c: dict) -> list:
+def check_banned(c: dict, base: Path | None = None) -> list:
     out = []
-    for section, texts in section_texts(c).items():
+    for section, texts in section_texts(c, base).items():
         for hit in BANNED.findall(" ".join(str(t) for t in texts if t)):
             out.append(f"{section}: banned superlative {hit!r}, say what it actually does")
     return out
@@ -111,8 +123,15 @@ def check_diagram(c: dict, base: Path) -> list:
     d = c.get("diagram") or {}
     out = []
     if d.get("mode") == "image":
-        if not (base / d.get("image", "")).is_file():
+        image = str(d.get("image") or "")
+        path = base / image
+        if not path.is_file():
             out.append(f"diagram: image {d.get('image')!r} not found")
+        elif image.lower().endswith(".svg"):
+            # A flow diagram is hand-authored, so its geometry is the thing that breaks.
+            # No renderer runs here, so this is the only pass that would catch a label
+            # printing outside the box it belongs to.
+            out += [f"diagram: {x}" for x in check_svg(path)]
         return out
 
     tiers = d.get("tiers") or []
@@ -149,9 +168,10 @@ def check_counts(c: dict) -> list:
     return out
 
 
-def warnings(c: dict) -> list:
+def warnings(c: dict, base: Path | None = None) -> list:
     out = []
-    outstanding = sum(str(t).count(TODO) for texts in section_texts(c).values() for t in texts)
+    outstanding = sum(str(t).count(TODO)
+                      for texts in section_texts(c, base).values() for t in texts)
     if outstanding:
         out.append(f"{outstanding} unresolved {TODO} claim(s). Resolve or delete before sending")
     if len(c.get("decisions", [])) > 4:
@@ -193,13 +213,13 @@ def report(slug: str, strict: bool = False) -> int:
     c = json.loads(src.read_text(encoding="utf-8"))
 
     print(f"\n{src}")
-    counts = {name: words(*texts) for name, texts in section_texts(c).items()}
+    counts = {name: words(*texts) for name, texts in section_texts(c, base).items()}
     for name, budget in BUDGETS.items():
         flag = "  over" if counts[name] > budget else ""
         print(f"  {name:<13}{counts[name]:>4} / {budget}{flag}")
     print(f"  {'total':<13}{sum(counts.values()):>4} / {TOTAL}")
 
-    errors = (check_schema(c) + check_budgets(c) + check_banned(c)
+    errors = (check_schema(c) + check_budgets(c, base) + check_banned(c, base)
               + check_decisions(c) + check_diagram(c, base) + check_counts(c))
 
     out = ROOT / "out" / f"overview-{slug}.html"
@@ -211,7 +231,7 @@ def report(slug: str, strict: bool = False) -> int:
             print("  warning: over 3MB is awkward to send. Downscale the screenshots:")
             print(f"    sips -Z 1200 {base / 'images'}/*.png")
 
-    notes = warnings(c)
+    notes = warnings(c, base)
     for w in notes:
         print(f"  warning: {w}")
     for x in errors:

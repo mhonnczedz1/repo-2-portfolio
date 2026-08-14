@@ -1,14 +1,18 @@
 """The skill's documentation must not drift from the code that enforces it."""
 import json
 import re
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
 
 from tools.check import (BANNED, BUDGETS, TOTAL, check_banned, check_counts, check_decisions,
                          check_diagram, check_schema)
+from tools.svgcheck import check_svg, svg_words
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILL = ROOT / ".claude" / "skills" / "project-overview"
+TEMPLATE = SKILL / "references" / "architecture-template.svg"
 
 
 def skill_text() -> str:
@@ -60,6 +64,13 @@ class ExampleTest(unittest.TestCase):
     def setUp(self):
         block = re.search(r"```json\n(.*?)```", skill_text(), re.S).group(1)
         self.example = json.loads(block)
+        # The example points at images/architecture.svg, the path a real overview uses, so stage
+        # the shipped template there. That makes the diagram check resolve against a real file
+        # and, since check_diagram now verifies SVG geometry, checks the template at the same time.
+        self.base = Path(tempfile.mkdtemp())
+        (self.base / "images").mkdir()
+        shutil.copy(TEMPLATE, self.base / "images" / "architecture.svg")
+        self.addCleanup(shutil.rmtree, self.base, ignore_errors=True)
 
     def test_example_satisfies_the_schema(self):
         self.assertEqual(check_schema(self.example), [])
@@ -67,9 +78,38 @@ class ExampleTest(unittest.TestCase):
     def test_example_breaks_no_quality_rule(self):
         c = self.example
         self.assertEqual(check_banned(c) + check_decisions(c) + check_counts(c), [])
-        self.assertEqual(check_diagram(c, SKILL), [])
+        self.assertEqual(check_diagram(c, self.base), [])
 
-    def test_example_uses_only_real_node_types(self):
-        kinds = {n.get("type") for tier in self.example["diagram"]["tiers"]
-                 for n in tier["nodes"]}
-        self.assertTrue(kinds <= {None, "core", "ext", "store", "ai"}, kinds)
+    def test_example_diagram_is_valid_in_whichever_mode_it_declares(self):
+        """Holds for both modes, since the example may legitimately show either."""
+        d = self.example["diagram"]
+        if d.get("mode") == "image":
+            self.assertTrue(d["image"].endswith((".svg", ".png")), d["image"])
+        else:
+            kinds = {n.get("type") for tier in d["tiers"] for n in tier["nodes"]}
+            self.assertTrue(kinds <= {None, "core", "ext", "store", "ai"}, kinds)
+
+
+class FlowTemplateTest(unittest.TestCase):
+    """The template is shipped to be copied, so it has to be correct on its own."""
+
+    FLOW_DOC = SKILL / "references" / "diagram-flow.md"
+
+    def test_geometry_holds(self):
+        self.assertEqual(check_svg(TEMPLATE), [])
+
+    def test_it_leaves_room_for_a_caption(self):
+        spent = sum(len(t.split()) for t in svg_words(TEMPLATE))
+        self.assertLess(spent, BUDGETS["diagram"] - 10,
+                        "a template that fills the diagram budget leaves nothing for the caption")
+
+    def test_it_carries_no_legend(self):
+        printed = " ".join(svg_words(TEMPLATE)).lower()
+        for phrase in ("third party", "model step", "outside the app", "own component"):
+            self.assertNotIn(phrase, printed, "flow diagrams carry no legend")
+
+    def test_canvas_ceiling_matches_the_documented_one(self):
+        width = float(re.search(r'viewBox="0 0 ([\d.]+)', TEMPLATE.read_text(encoding="utf-8"))
+                      .group(1))
+        self.assertLessEqual(width, 660, "wider than 660px overflows the A4 text column")
+        self.assertIn("660", self.FLOW_DOC.read_text(encoding="utf-8"))

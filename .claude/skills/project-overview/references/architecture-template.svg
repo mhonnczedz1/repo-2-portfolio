@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 280" width="660" height="280"
+     role="img" aria-label="Template request flow. Write path: client to an ingest endpoint to a transform to an embedding model, written into the datastore. Read path: caller to a query endpoint to retrieval, reading from the datastore, then generation, streamed back to the caller.">
+  <!--
+    Copy this to overviews/<slug>/images/architecture.svg and edit the label text only.
+    Every coordinate here is load-bearing, and the recipe is documented in
+    references/diagram-flow.md. Verify after editing:
+
+        python3 tools/svgcheck.py overviews/<slug>/images/architecture.svg
+
+    Layout, all in px, 1 unit = 1 CSS px = 1/96in in print:
+      lane label baselines   22 (upper), 192 (lower)
+      node rows              y 34..74 and y 204..244, height 40
+      shared store           y 118..160, centred x 300..490
+      node columns           x 24 w92 | 140 w140 | 304 w150 | 478 w134
+      horizontal arrows      in the 24px gaps between columns
+      return edge            y 262, label baseline 258
+      canvas ceiling         660 x 300, so it prints inside A4's 182mm text column
+      no legend              the node names carry it
+  -->
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+    .t{font-size:13px;font-weight:600;fill:#16181d}
+    .s{font-size:10.5px;fill:#6b7280}
+    .lane{font-size:10px;font-weight:700;fill:#6b7280;letter-spacing:.09em}
+    .n{fill:#fff;stroke:#b9c0c9;stroke-width:1}
+    .core{fill:#fff;stroke:#16181d;stroke-width:1.8}
+    .ext{fill:#f6f8fa;stroke:#b9c0c9;stroke-width:1;stroke-dasharray:4 3}
+    .ai{fill:#f7f3ff;stroke:#7c3aed;stroke-width:1}
+    .store{fill:#f6f8fa;stroke:#b9c0c9;stroke-width:1}
+    .edge{fill:none;stroke:#6b7280;stroke-width:1.2}
+    .elab{font-size:10px;fill:#6b7280}
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 8 8" refX="6.5" refY="4"
+            markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+      <path d="M0,0.5 L8,4 L0,7.5 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="659" height="279" rx="7" fill="#fcfdfe" stroke="#d7dbe0"/>
+
+  <!-- upper lane: the path that writes -->
+  <text class="lane" x="24" y="22">WRITE PATH</text>
+
+  <rect class="ext"  x="24"  y="34" width="92"  height="40" rx="6"/>
+  <text class="t" x="36"  y="51">client</text>
+  <text class="s" x="36"  y="65">one upload</text>
+
+  <rect class="core" x="140" y="34" width="140" height="40" rx="6"/>
+  <text class="t" x="152" y="51">POST /ingest</text>
+  <text class="s" x="152" y="65">FastAPI</text>
+
+  <rect class="n"    x="304" y="34" width="150" height="40" rx="6"/>
+  <text class="t" x="316" y="51">transform</text>
+  <text class="s" x="316" y="65">chunk, 375 words</text>
+
+  <rect class="ai"   x="478" y="34" width="134" height="40" rx="6"/>
+  <text class="t" x="490" y="51">embed</text>
+  <text class="s" x="490" y="65">embedding model</text>
+
+  <path class="edge" d="M120,54 L134,54" marker-end="url(#ah)"/>
+  <path class="edge" d="M284,54 L298,54" marker-end="url(#ah)"/>
+  <path class="edge" d="M458,54 L472,54" marker-end="url(#ah)"/>
+
+  <!-- into the store, labelled with what moves -->
+  <path class="edge" d="M545,74 C545,96 508,92 462,113" marker-end="url(#ah)"/>
+  <text class="elab" x="562" y="101">write</text>
+
+  <!-- drawn once, where both paths meet -->
+  <rect class="store" x="300" y="118" width="190" height="42" rx="21"/>
+  <text class="t" x="395" y="137" text-anchor="middle">Datastore</text>
+  <text class="s" x="395" y="151" text-anchor="middle">scoped by owner</text>
+
+  <!-- out of the store -->
+  <path class="edge" d="M335,160 C335,182 352,180 377,199" marker-end="url(#ah)"/>
+  <text class="elab" x="292" y="183" text-anchor="end">read</text>
+
+  <!-- lower lane: the path that reads -->
+  <text class="lane" x="24" y="192">READ PATH</text>
+
+  <rect class="ext"  x="24"  y="204" width="92"  height="40" rx="6"/>
+  <text class="t" x="36"  y="221">caller</text>
+  <text class="s" x="36"  y="235">owns history</text>
+
+  <rect class="core" x="140" y="204" width="140" height="40" rx="6"/>
+  <text class="t" x="152" y="221">POST /query</text>
+  <text class="s" x="152" y="235">FastAPI</text>
+
+  <rect class="n"    x="304" y="204" width="150" height="40" rx="6"/>
+  <text class="t" x="316" y="221">retrieve</text>
+  <text class="s" x="316" y="235">top 4, filtered</text>
+
+  <rect class="ai"   x="478" y="204" width="134" height="40" rx="6"/>
+  <text class="t" x="490" y="221">generate</text>
+  <text class="s" x="490" y="235">chat model</text>
+
+  <path class="edge" d="M120,224 L134,224" marker-end="url(#ah)"/>
+  <path class="edge" d="M284,224 L298,224" marker-end="url(#ah)"/>
+  <path class="edge" d="M458,224 L472,224" marker-end="url(#ah)"/>
+
+  <!-- the response, back to whoever asked -->
+  <path class="edge" d="M545,244 L545,256 Q545,262 539,262 L76,262 Q70,262 70,256 L70,250"
+        marker-end="url(#ah)"/>
+  <text class="elab" x="307" y="258" text-anchor="middle">streamed response</text>
+</svg>

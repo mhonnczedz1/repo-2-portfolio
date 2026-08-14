@@ -2,6 +2,7 @@
 import contextlib
 import io
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -264,3 +265,50 @@ class CliTest(unittest.TestCase):
     def test_unknown_slug_is_an_error_not_a_crash(self):
         code, _ = self._run("no-such-project")
         self.assertEqual(code, 1)
+
+
+class FlowDiagramTest(unittest.TestCase):
+    """A flow diagram is an SVG, so its labels print and its geometry is hand-authored.
+
+    Both were invisible to the validator before: an image-mode diagram was scored on its
+    caption alone, and nothing looked inside the file at all.
+    """
+
+    FLOW = {"mode": "image", "image": "flow.svg", "caption": "What to notice."}
+
+    def test_svg_labels_count_towards_the_diagram_budget(self):
+        c = content(diagram=self.FLOW)
+        caption_only = words(*section_texts(c)["diagram"])
+        with_labels = words(*section_texts(c, FIXTURES)["diagram"])
+        self.assertEqual(caption_only, 3)
+        self.assertEqual(with_labels, 9, "PATH client upload API FastAPI write, plus the caption")
+
+    def test_a_png_diagram_is_unaffected(self):
+        c = content(diagram={"mode": "image", "image": "pixel.png", "caption": "What to notice."})
+        self.assertEqual(words(*section_texts(c, FIXTURES)["diagram"]), 3)
+
+    def test_a_flow_diagram_within_budget_passes(self):
+        c = content(diagram=self.FLOW)
+        self.assertEqual(check_diagram(c, FIXTURES), [])
+        self.assertEqual(check_budgets(c, FIXTURES), [])
+
+    def test_labels_pushing_the_diagram_over_budget_fail(self):
+        c = content(diagram={**self.FLOW, "caption": "word " * BUDGETS["diagram"]})
+        self.assertTrue(any("diagram" in x for x in check_budgets(c, FIXTURES)))
+
+    def test_broken_geometry_fails_the_build(self):
+        broken = Path(tempfile.mkdtemp())
+        (broken / "flow.svg").write_text(
+            (FIXTURES / "flow.svg").read_text(encoding="utf-8")
+            .replace("upload", "upload a document and wait for the embedding call"),
+            encoding="utf-8")
+        c = content(diagram=self.FLOW)
+        self.assertTrue(any("overflows" in x for x in check_diagram(c, broken)))
+
+    def test_a_banned_word_inside_the_svg_fails(self):
+        tainted = Path(tempfile.mkdtemp())
+        (tainted / "flow.svg").write_text(
+            (FIXTURES / "flow.svg").read_text(encoding="utf-8").replace(">upload<", ">robust<"),
+            encoding="utf-8")
+        c = content(diagram=self.FLOW)
+        self.assertTrue(any("robust" in x for x in check_banned(c, tainted)))
