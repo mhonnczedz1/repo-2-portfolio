@@ -182,3 +182,8 @@ Deliberate, and worth knowing before changing anything:
   a CSS `:target` overlay that lifts the same `<img>`, so nothing is duplicated and the payload
   does not grow.
 - **No em dashes or en dashes** in any output copy.
+
+## License
+
+MIT. Use it, change it, ship it, no attribution required beyond keeping the notice. See
+[LICENSE](LICENSE).
