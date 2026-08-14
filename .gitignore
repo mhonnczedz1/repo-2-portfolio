@@ -1,4 +1,5 @@
-# Local identity and generated artifacts
+# Local identity and generated artifacts.
+# config.example.json is tracked and documents the shape; config.json is yours.
 config.json
 out/
 .tmp/

@@ -27,7 +27,8 @@ Requires Python 3 and Claude Code. No packages, no build step, no virtualenv.
 ```sh
 git clone <this-repo> project-overview
 cd project-overview
-python3 -m unittest discover -s tests -t .    # 118 tests, should pass immediately
+cp config.example.json config.json            # then fill in your name and email
+python3 -m unittest discover -s tests -t .    # 122 tests, should pass immediately
 ```
 
 The skill is project-scoped: it lives in `.claude/skills/project-overview/` and is discovered by
@@ -71,16 +72,26 @@ python3 tools/check.py <slug> --strict    # the gate before sending: no TODO(ver
 
 ### Your name and email
 
-Put them in `config.json` at the repo root, which is gitignored:
+Copy the tracked example and fill it in:
+
+```sh
+cp config.example.json config.json
+```
 
 ```json
 { "footer": { "name": "Your Name", "email": "you@example.com", "link": "" } }
 ```
 
-`tools/render.py` merges it over whatever is in `content.json`, so the committed files can carry
-a placeholder while your own renders carry the real thing. Empty values never overwrite, which is
-why a real demo URL in `content.json` survives the blank `link` above. The skill writes this file
-for you the first time it asks.
+`config.json` is gitignored, so your details never enter version control. `tools/render.py` merges
+it over whatever `content.json` holds, which is why the tracked files can carry a placeholder while
+your own renders carry the real thing.
+
+Empty values never overwrite. That is why `link` is blank above: a repo or demo URL is specific to
+each project, so it belongs in that project's `content.json`, and leaving it empty here means it
+survives. Set it only if you want one link used everywhere.
+
+The skill writes this file for you the first time it asks, so a later project never asks again. If
+it is missing, `render.py` says so and tells you the command.
 
 ## What it produces
 
@@ -122,12 +133,13 @@ structured, `tools/check.py` fails the build on things a prose style guide could
 
 ```
 .claude/skills/project-overview/   SKILL.md and its references. The instructions Claude follows
+config.example.json  the shape of the gitignored config.json. Copy it, fill it in
 assets/          style.css (the single source of design) and the document shell
 tools/           render.py, check.py, make_sample.py. Standard library only
 samples/         a rendered example, so you can see the output without running anything
 overviews/<slug>/  your content.json and screenshots. Generated on first run, gitignored
 out/             your rendered artifacts. Gitignored
-tests/           118 tests, run with unittest
+tests/           122 tests, run with unittest
 tests/fixtures/  valid.json, the example content the repo tracks and the sample renders from
 tests/golden/    the committed design snapshot
 ```

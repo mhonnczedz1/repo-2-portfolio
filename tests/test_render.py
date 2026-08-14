@@ -1,4 +1,5 @@
 """The renderer turns content into markup, and never leaves a fetchable reference behind."""
+import json
 import re
 import unittest
 from pathlib import Path
@@ -98,6 +99,33 @@ class ConfigIdentityTest(unittest.TestCase):
         render_body = body[body.index("def render(content"):body.index("def main(")]
         self.assertNotIn("load_identity", render_body)
         self.assertNotIn("config.json", render_body)
+
+
+class ConfigExampleTest(unittest.TestCase):
+    """config.json is gitignored, so the tracked example is the only documentation of it."""
+
+    EXAMPLE = Path(__file__).resolve().parent.parent / "config.example.json"
+
+    def setUp(self):
+        self.config = json.loads(self.EXAMPLE.read_text(encoding="utf-8"))
+
+    def test_the_example_exists_and_parses(self):
+        self.assertIn("footer", self.config)
+
+    def test_it_documents_exactly_the_fields_the_renderer_reads(self):
+        """If the footer grows a field, the example has to grow it too or it misleads."""
+        self.assertEqual(set(self.config["footer"]), {"name", "email", "link"})
+
+    def test_it_holds_no_real_identity(self):
+        blob = json.dumps(self.config)
+        self.assertNotIn("@gmail", blob)
+        self.assertIn("you@example.com", blob)
+
+    def test_copying_it_unedited_changes_nothing_surprising(self):
+        """Its empty link must not blank a real per-project demo URL."""
+        got = apply_identity({"name": "Your Name", "email": "you@example.com",
+                              "link": "https://demo.example.com"}, self.config["footer"])
+        self.assertEqual(got["link"], "https://demo.example.com")
 
 
 class BulletsTest(unittest.TestCase):

@@ -60,7 +60,7 @@ def load_identity() -> dict:
     This is why a published content.json can carry a placeholder name without every
     local render carrying it too. Read by main(), never by render(), so the rendered
     output stays a pure function of its inputs and the design snapshot is reproducible
-    on a fresh clone that has no config.json.
+    on a fresh clone that has no config.json. config.example.json documents the shape.
     """
     path = ROOT / "config.json"
     if not path.is_file():
@@ -266,13 +266,17 @@ def main(argv=None) -> int:
         return 1
 
     content = json.loads(src.read_text(encoding="utf-8"))
-    content["footer"] = apply_identity(content.get("footer", {}), load_identity())
+    identity = load_identity()
+    content["footer"] = apply_identity(content.get("footer", {}), identity)
     out = Path(a.out) if a.out else ROOT / "out" / f"overview-{a.slug}.html"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(render(content, base, a.no_backgrounds), encoding="utf-8")
 
     size = out.stat().st_size
     print(f"wrote {out}  ({size / 1024:.0f}KB)")
+    if not identity:
+        print("  note: no config.json, so the footer is whatever content.json says.")
+        print("    cp config.example.json config.json   then fill in name and email")
     if size > SIZE_WARN:
         print("  warning: over 3MB is awkward to send. Downscale the screenshots:")
         print(f"    sips -Z 1200 {base / 'images'}/*.png")
