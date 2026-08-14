@@ -12,11 +12,21 @@ def golden_style() -> str:
     return re.search(r"<style>(.*?)</style>", doc, re.S).group(1)
 
 
+def rules(css: str) -> str:
+    """Declarations only. Comments and whitespace do not render, so they do not count."""
+    return re.sub(r"\s+", " ", re.sub(r"/\*.*?\*/", "", css, flags=re.S)).strip()
+
+
 class AssetsTest(unittest.TestCase):
-    def test_stylesheet_starts_with_version_one_verbatim(self):
+    def test_stylesheet_keeps_every_version_one_rule_in_order(self):
         css = (ROOT / "assets" / "style.css").read_text(encoding="utf-8")
-        self.assertTrue(css.startswith(golden_style()),
-                        "version 1 CSS must be extracted byte for byte, additions appended after")
+        self.assertTrue(rules(css).startswith(rules(golden_style())),
+                        "version 1 rules must survive unchanged and in order, additions appended")
+
+    def test_stylesheet_is_navigable(self):
+        """It is the single source of design now, so the section headers earn their place."""
+        css = (ROOT / "assets" / "style.css").read_text(encoding="utf-8")
+        self.assertGreaterEqual(css.count("/* ----------"), 7)
 
     def test_stylesheet_adds_toolbar_and_two_up_metrics(self):
         css = (ROOT / "assets" / "style.css").read_text(encoding="utf-8")

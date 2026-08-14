@@ -1,0 +1,69 @@
+{
+  "slug": "kwizme",
+  "title": "KwizMe",
+  "tagline": "A study tool that turns your lecture PDFs into practice quizzes you can retake.",
+  "chips": [
+    {"label": "Role", "value": "solo build"},
+    {"label": "Timeline", "value": "Nov 2025 to May 2026"},
+    {"label": "Status", "value": "live on Vercel"},
+    {"label": "Scale", "value": "TODO(verify) quizzes generated"},
+    {"label": "Stack", "value": "Next.js, Supabase, Gemini, sql.js"}
+  ],
+  "result": "No account needed: an anonymous visitor uploads a deck, gets five quizzes a day, and retakes them in the browser.",
+  "problem": [
+    "Students revising from their own lecture notes have no practice questions, so they re-read material instead of testing themselves, which retains less. Writing questions by hand from a long deck is slow enough that most people skip it, and the generic question banks that do exist are not about the material they were actually taught. TODO(verify) how long a deck took you by hand, if you timed it."
+  ],
+  "architecture": [
+    "`/api/generate-quiz` accepts an uploaded PDF, image or text file, checks type and page count with pdf-lib, and sends the extracted content to Gemini 2.5 Flash with a JSON response type so the reply is parseable by contract rather than by regex. A deterministic `validateQuizResponse` pass rejects a malformed or short-count response before anything is stored. A second, cooler model call at temperature 0.3 does nothing but tidy the quiz description, which keeps the expensive call at 0.7 focused on questions and gives it a 60k output ceiling, because truncation was the failure that mattered.",
+    "The boundary that shapes the codebase is anonymous versus signed in. `storage-router.ts` and `session-storage-router.ts` present one API for save, read and delete, then route to browser storage for anonymous users or to Supabase Postgres for authenticated ones, where eight tables carry row-level security. Rate limiting mirrors the same split: five generations a day, keyed by IP when there is no account and by user id when there is, with per-user overrides in a `user_limits` table."
+  ],
+  "diagram": {
+    "mode": "kit",
+    "legend": ["ext", "ai", "store"],
+    "caption": "One router decides where a quiz lives; nothing else knows.",
+    "tiers": [
+      {"label": "Ingest", "nodes": [
+        {"text": "Client", "note": "PDF, image, text", "type": "ext"},
+        {"text": "Validator", "note": "pdf-lib"},
+        {"text": "API route", "note": "/api/generate-quiz", "type": "core"}
+      ]},
+      {"label": "Generate", "nodes": [
+        {"text": "Gemini 2.5 Flash", "note": "JSON type, temp 0.7", "type": "ai"},
+        {"text": "Validate", "note": "reject bad JSON"},
+        {"text": "Description pass", "note": "temp 0.3", "type": "ai"}
+      ]},
+      {"label": "Store", "nodes": [
+        {"text": "Storage router", "note": "one API, two backends"},
+        {"text": "Browser SQLite", "note": "anonymous", "type": "store"},
+        {"text": "Supabase Postgres", "note": "8 tables, RLS", "type": "store"}
+      ]}
+    ]
+  },
+  "shots": [
+    {"src": "images/01-generate.png",
+     "caption": "A lecture PDF becomes a quiz in one pass, at the question count the user asked for."},
+    {"src": "images/02-retake.png",
+     "caption": "Retaking records each answer separately, so a weak topic shows up across attempts."}
+  ],
+  "decisions": [
+    {"chose": "Browser storage for anonymous users", "over": "a signup wall",
+     "because": "someone can finish the whole loop before creating an account, at the cost of a second storage path that has to stay in step with Postgres."},
+    {"chose": "A JSON response type from the model", "over": "parsing free-form text",
+     "because": "the reply is parseable by contract, and a deterministic validator can reject the rest before it reaches a table."},
+    {"chose": "Row-level security in Postgres", "over": "filtering by user id in application code",
+     "because": "a query someone forgets to filter cannot leak another student's quizzes, accepting policies that have to be tested in SQL."},
+    {"chose": "IP-keyed limits before signup", "over": "unlimited anonymous use",
+     "because": "every generation costs a model call, accepting that people behind one network share a quota."}
+  ],
+  "impact": [
+    "Because nothing is gated, the funnel starts at first use rather than at signup, and a visitor who never registers still gets the full loop. It carries what a launched app needs rather than what a demo needs: Sentry error capture, Discord alerts on signup, generation and failure, health endpoints for both the app and the database, and a public status page. TODO(verify) quizzes generated and signups to date, both readable from the usage dashboard."
+  ],
+  "limits": [
+    "Anonymous quizzes live in one browser, so clearing storage loses them and they cannot follow a student to a second device. Next: an export offered before signup."
+  ],
+  "footer": {
+    "name": "Mhonn Czedrick Ybañez",
+    "email": "you@example.com",
+    "link": "https://kwizme.vercel.app"
+  }
+}

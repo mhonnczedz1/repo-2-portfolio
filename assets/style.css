@@ -13,11 +13,13 @@
   .doc{ max-width:182mm; margin:24px auto; padding:16mm 14mm; background:#fff;
         box-shadow:0 1px 4px rgba(0,0,0,.12); }
 
+  /* ---------- screen-only usage banner: never prints ---------- */
   .banner{ max-width:182mm; margin:24px auto -8px; padding:10px 14px; border:1px solid #c7d2fe;
            background:#eef2ff; border-radius:6px; font-size:9pt; color:#3730a3; }
   .banner b{ color:#312e81; }
   .banner code{ background:#fff; padding:1px 4px; border-radius:3px; }
 
+  /* ---------- header ---------- */
   h1{ font-size:19pt; line-height:1.15; margin:0 0 4px; color:var(--ink); letter-spacing:-.01em; }
   .sub{ font-size:11pt; color:var(--body); margin:0 0 10px; }
   .chips{ display:flex; flex-wrap:wrap; gap:5px; margin:0 0 12px; padding:0; list-style:none; }
@@ -27,23 +29,27 @@
   .result{ border-left:3px solid var(--accent); background:var(--accent-tint);
            padding:8px 12px; font-size:10.5pt; color:var(--ink); margin:0 0 18px; }
 
+  /* ---------- sections ---------- */
   section{ margin:0 0 16px; }
   h2{ font-size:8.5pt; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
       margin:0 0 7px; padding-bottom:4px; border-bottom:1px solid var(--rule); font-weight:700; }
   p{ margin:0 0 8px; }
-  .ph{ color:var(--warn); }
+  .ph{ color:var(--warn); }               /* legacy: version 1 placeholder text */
   code{ font:9.5pt ui-monospace,SFMono-Regular,Menlo,monospace; }
 
+  /* ---------- decisions ---------- */
   ul.decisions{ margin:0; padding:0; list-style:none; }
   ul.decisions li{ margin:0 0 7px; padding-left:13px; position:relative; break-inside:avoid; }
   ul.decisions li::before{ content:"\25B8"; position:absolute; left:0; color:var(--accent); }
   ul.decisions b{ color:var(--ink); }
 
+  /* ---------- metrics (optional, max 3) ---------- */
   .metrics{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:2px 0 10px; }
   .metric{ border:1px solid var(--rule); border-radius:5px; padding:8px 10px; break-inside:avoid; }
   .metric .val{ font-size:15pt; font-weight:700; color:var(--ink); line-height:1.1; }
   .metric .lbl{ font-size:8pt; color:var(--muted); }
 
+  /* ---------- architecture diagram kit ---------- */
   .arch{ border:1px solid var(--rule); border-radius:6px; padding:12px 14px; background:#fcfdfe; }
   .tier{ display:flex; align-items:stretch; flex-wrap:wrap; gap:8px; }
   .tier::before{ content:attr(data-label); flex:none; width:62px; align-self:center;
@@ -67,6 +73,7 @@
   .legend .l-ai::before{ border-color:var(--accent); background:var(--accent-tint); }
   .legend .l-store::before{ border-radius:6px; background:var(--tint); }
 
+  /* ---------- figures and screenshots ---------- */
   figure{ margin:0 0 12px; break-inside:avoid; }
   figcaption{ font-size:8pt; color:var(--muted); margin-top:5px; }
   figcaption b{ color:var(--body); }
