@@ -1,7 +1,24 @@
-PLAN.md
+# Local identity and generated artifacts
 config.json
 out/
+.tmp/
+
+# Screenshots belong to whoever's overviews these are, not to the tool. A missing
+# file renders as a named dashed box, so a fresh clone still lays out correctly.
+overviews/*/images/*
+!overviews/*/images/.gitkeep
+
+# Working document: spec, plan and tracker
+PLAN.md
+
+# Python
 __pycache__/
 *.pyc
+.venv/
+venv/
+
+# Editor and OS
 .claude/settings.local.json
-.tmp/
+.DS_Store
+.idea/
+.vscode/

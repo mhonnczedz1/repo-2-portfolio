@@ -54,6 +54,29 @@ def identity_parts(f: dict) -> list:
     return [f'<span>{e(f["name"])}</span>', f'<span>{e(f["email"])}</span>', linked]
 
 
+def load_identity() -> dict:
+    """The footer identity from config.json, which is gitignored and personal.
+
+    This is why a published content.json can carry a placeholder name without every
+    local render carrying it too. Read by main(), never by render(), so the rendered
+    output stays a pure function of its inputs and the design snapshot is reproducible
+    on a fresh clone that has no config.json.
+    """
+    path = ROOT / "config.json"
+    if not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("footer") or {}
+    except (json.JSONDecodeError, OSError):
+        print(f"warning: ignoring unreadable {path.name}", file=sys.stderr)
+        return {}
+
+
+def apply_identity(footer: dict, identity: dict) -> dict:
+    """config.json wins where it has something to say. Empty values never overwrite."""
+    return {**footer, **{k: v for k, v in identity.items() if v}}
+
+
 def render_byline(f: dict) -> str:
     """The header copy of the identity, for a reader who never reaches the footer."""
     return '<p class="byline">\n  ' + "\n  ".join(identity_parts(f)) + "\n</p>"
@@ -243,6 +266,7 @@ def main(argv=None) -> int:
         return 1
 
     content = json.loads(src.read_text(encoding="utf-8"))
+    content["footer"] = apply_identity(content.get("footer", {}), load_identity())
     out = Path(a.out) if a.out else ROOT / "out" / f"overview-{a.slug}.html"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(render(content, base, a.no_backgrounds), encoding="utf-8")

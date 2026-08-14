@@ -50,7 +50,9 @@ Present that single list, plus the two things a repo never contains:
    average ten words each.
 2. **Footer identity.** Read `config.json` at the repo root if it exists and use it silently.
    If it does not exist, ask once for name, email, and repo or demo link, then write it there so
-   no later project asks again. It renders twice, in the header byline and in the footer.
+   no later project asks again. `tools/render.py` merges that file over whatever `content.json`
+   holds, so a committed placeholder never reaches a real render. It prints twice, in the header
+   byline and in the footer.
 
 Anything the user skips becomes the literal text `TODO(verify)` in that field, followed by what
 to check. It stays visible in the draft, it does not count against the word budget, and

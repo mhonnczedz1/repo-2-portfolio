@@ -3,9 +3,9 @@ import re
 import unittest
 from pathlib import Path
 
-from tools.render import (e, identity_parts, render, render_bullets, render_byline, render_diagram,
-                          render_footer, render_gallery, render_header, render_metrics,
-                          render_prose)
+from tools.render import (apply_identity, e, identity_parts, render, render_bullets, render_byline,
+                          render_diagram, render_footer, render_gallery, render_header,
+                          render_metrics, render_prose)
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -70,6 +70,34 @@ class IdentityTest(unittest.TestCase):
         for part in parts:
             self.assertIn(part, render_byline(CONTENT["footer"]))
             self.assertIn(part, render_footer(CONTENT["footer"]))
+
+
+class ConfigIdentityTest(unittest.TestCase):
+    """A published content.json carries a placeholder; config.json is gitignored and real."""
+
+    PLACEHOLDER = {"name": "Your Name", "email": "you@example.com", "link": "repo link"}
+
+    def test_config_values_override_the_placeholder(self):
+        got = apply_identity(self.PLACEHOLDER, {"name": "A Real Name", "email": "a@b.com"})
+        self.assertEqual(got["name"], "A Real Name")
+        self.assertEqual(got["email"], "a@b.com")
+
+    def test_an_empty_config_value_never_overwrites(self):
+        """config.json ships with link empty, and that must not blank a real demo URL."""
+        got = apply_identity({**self.PLACEHOLDER, "link": "https://demo.example.com"},
+                             {"name": "A Real Name", "link": ""})
+        self.assertEqual(got["link"], "https://demo.example.com")
+
+    def test_no_config_leaves_the_content_untouched(self):
+        self.assertEqual(apply_identity(self.PLACEHOLDER, {}), self.PLACEHOLDER)
+
+    def test_render_never_reads_config_itself(self):
+        """Purity keeps the design snapshot reproducible on a clone with no config.json."""
+        source = Path(__file__).resolve().parent.parent / "tools" / "render.py"
+        body = source.read_text(encoding="utf-8")
+        render_body = body[body.index("def render(content"):body.index("def main(")]
+        self.assertNotIn("load_identity", render_body)
+        self.assertNotIn("config.json", render_body)
 
 
 class BulletsTest(unittest.TestCase):
