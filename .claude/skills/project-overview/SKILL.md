@@ -86,7 +86,10 @@ open out/overview-<slug>.html
 Tell the user three things:
 
 - The file is self-contained. Send it as is; images travel inside it.
-- The "Save as PDF" button works for them and for anyone they forward it to.
+- The "Save as PDF" button works for them and for anyone they forward it to. Tell them to untick
+  "Headers and footers" in the print dialog, otherwise the browser stamps the file URL and the
+  page number into the margins. That is the browser's print engine, not the document, so no
+  stylesheet can remove it. The toolbar in the artifact repeats this for recipients.
 - Gallery images expand when clicked, and close on the next click. No JavaScript is involved,
   so it works even where inline handlers are blocked.
 - Two checks need human eyes, because no browser automation is available here: print preview

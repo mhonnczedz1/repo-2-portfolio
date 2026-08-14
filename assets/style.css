@@ -146,6 +146,7 @@
              border-radius:5px; padding:7px 14px; cursor:pointer; }
   .printbtn:hover{ background:#6d28d9; }
   .toolbar .hint{ color:#4338ca; }
+  .toolbar .hint b{ color:#312e81; }
 
   /* ---------- print: compact the screen design back onto 2 A4 pages ---------- */
   @media print{

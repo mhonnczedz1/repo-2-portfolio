@@ -70,5 +70,10 @@ Open the file and click "Save as PDF", or press Cmd+P. A4, default margins. The 
 not depend on the "background graphics" setting, so the document reads correctly either way, and
 an image left expanded on screen returns to the flow when printed.
 
+**Untick "Headers and footers" in the print dialog.** With it on, the browser prints the file URL
+and "Page 1 of 2" in the page margins. Those are drawn by the browser's print engine, not by the
+document, so no `@page` rule or `@media print` block can suppress them; the checkbox is the only
+control. The in-artifact toolbar says so, which is how a recipient finds out.
+
 Two checks need human eyes: the print preview should land on 2 A4 pages with no orphaned
 headings, and gallery images should be legible at grid size.

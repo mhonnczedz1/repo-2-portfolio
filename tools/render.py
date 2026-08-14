@@ -25,8 +25,9 @@ SIZE_WARN = 3 * 1024 * 1024
 TOOLBAR = (
     '<div class="toolbar">\n'
     '  <button type="button" class="printbtn" onclick="window.print()">Save as PDF</button>\n'
-    '  <span class="hint">A4, two pages. Reads correctly with background graphics on or off.'
-    '</span>\n'
+    '  <span class="hint">A4, two pages. Untick <b>Headers and footers</b> in the print dialog '
+    'to drop the URL and page number, which the browser adds and no stylesheet can remove. '
+    'Reads correctly with background graphics on or off.</span>\n'
     '</div>'
 )
 

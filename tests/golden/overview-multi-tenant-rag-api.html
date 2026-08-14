@@ -152,6 +152,7 @@
              border-radius:5px; padding:7px 14px; cursor:pointer; }
   .printbtn:hover{ background:#6d28d9; }
   .toolbar .hint{ color:#4338ca; }
+  .toolbar .hint b{ color:#312e81; }
 
   /* ---------- print: compact the screen design back onto 2 A4 pages ---------- */
   @media print{
@@ -207,7 +208,7 @@
 <body>
 <div class="toolbar">
   <button type="button" class="printbtn" onclick="window.print()">Save as PDF</button>
-  <span class="hint">A4, two pages. Reads correctly with background graphics on or off.</span>
+  <span class="hint">A4, two pages. Untick <b>Headers and footers</b> in the print dialog to drop the URL and page number, which the browser adds and no stylesheet can remove. Reads correctly with background graphics on or off.</span>
 </div>
 <div class="doc">
 <h1>Multi-Tenant RAG Documents API</h1>
