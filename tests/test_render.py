@@ -2,7 +2,8 @@
 import unittest
 from pathlib import Path
 
-from tools.render import e, render, render_diagram, render_footer, render_header, render_prose
+from tools.render import (e, render, render_diagram, render_footer, render_header, render_metrics,
+                          render_prose, render_shots)
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -120,3 +121,40 @@ class DiagramTest(unittest.TestCase):
                              ROOT / "tests" / "fixtures")
         self.assertIn('<div class="slot">architecture.png</div>', out)
         self.assertNotIn("<img", out)
+
+
+FIXTURES = ROOT / "tests" / "fixtures"
+
+
+class ShotsTest(unittest.TestCase):
+    def test_present_image_is_inlined_as_base64(self):
+        out = render_shots([{"src": "pixel.png", "caption": "What it proves."}], FIXTURES)
+        self.assertIn('<img src="data:image/png;base64,iVBORw0KGgo', out)
+        self.assertNotIn('class="shot missing"', out)
+        self.assertIn("<figcaption>What it proves.</figcaption>", out)
+
+    def test_missing_image_becomes_a_named_placeholder(self):
+        out = render_shots([{"src": "images/99-nope.png", "caption": "Caption survives."}],
+                           FIXTURES)
+        self.assertIn('<figure class="shot missing">', out)
+        self.assertIn('<div class="slot">images/99-nope.png</div>', out)
+        self.assertNotIn("<img", out)
+        self.assertIn("Caption survives.", out)
+
+    def test_section_vanishes_without_shots(self):
+        self.assertEqual(render_shots([], FIXTURES), "")
+
+
+class MetricsTest(unittest.TestCase):
+    def test_three_tiles_use_the_default_grid(self):
+        out = render_metrics([{"value": "95%", "label": "a"}, {"value": "2", "label": "b"},
+                              {"value": "4 min", "label": "c"}])
+        self.assertIn('<div class="metrics">', out)
+        self.assertIn('<div class="val">95%</div>', out)
+
+    def test_two_tiles_switch_to_the_two_up_grid(self):
+        out = render_metrics([{"value": "95%", "label": "a"}, {"value": "2", "label": "b"}])
+        self.assertIn('<div class="metrics two">', out)
+
+    def test_grid_vanishes_without_numbers(self):
+        self.assertEqual(render_metrics([]), "")

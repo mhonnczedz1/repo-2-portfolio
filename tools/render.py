@@ -121,11 +121,31 @@ def render_diagram(d: dict, base: Path) -> str:
 
 
 def render_shots(shots, base: Path) -> str:
-    return ""      # Task 4
+    shots = list(shots or [])
+    if not shots:
+        return ""
+    figs = []
+    for i, s in enumerate(shots, 1):
+        uri = data_uri(base / s["src"])
+        if uri:
+            cls, media = "shot", f'      <img src="{uri}" alt="Screenshot {i}">'
+        else:
+            cls, media = "shot missing", f'      <div class="slot">{e(s["src"])}</div>'
+        figs.append(f'    <figure class="{cls}">\n{media}\n'
+                    f'      <figcaption>{e(s["caption"])}</figcaption>\n    </figure>')
+    return ('<section>\n  <h2>In use</h2>\n  <div class="shots">\n'
+            + "\n".join(figs) + "\n  </div>\n</section>")
 
 
 def render_metrics(metrics) -> str:
-    return ""      # Task 4
+    metrics = list(metrics or [])
+    if not metrics:
+        return ""
+    cls = "metrics two" if len(metrics) == 2 else "metrics"
+    tiles = "\n".join(
+        f'    <div class="metric"><div class="val">{e(m["value"])}</div>'
+        f'<div class="lbl">{e(m["label"])}</div></div>' for m in metrics)
+    return f'  <div class="{cls}">\n{tiles}\n  </div>'
 
 
 def render_decisions(items) -> str:
