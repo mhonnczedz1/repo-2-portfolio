@@ -45,14 +45,32 @@ def prose(text) -> str:
     return re.sub(r"`([^`]+)`", r"<code>\1</code>", e(text))
 
 
+def identity_parts(f: dict) -> list:
+    """Name, email, link. The link is anchored only when it really is a URL."""
+    link = f.get("link", "")
+    linked = (f'<a href="{e(link)}">{e(link)}</a>'
+              if link.startswith(("http://", "https://")) else f"<span>{e(link)}</span>")
+    return [f'<span>{e(f["name"])}</span>', f'<span>{e(f["email"])}</span>', linked]
+
+
+def render_byline(f: dict) -> str:
+    """The header copy of the identity, for a reader who never reaches the footer."""
+    return '<p class="byline">\n  ' + "\n  ".join(identity_parts(f)) + "\n</p>"
+
+
+def render_footer(f: dict) -> str:
+    return "<footer>\n  " + "\n  ".join(identity_parts(f)) + "\n</footer>"
+
+
 def render_header(c: dict) -> str:
     chips = "\n".join(
         f'  <li class="chip"><b>{e(ch["label"])}</b> {e(ch["value"])}</li>'
         for ch in c["chips"])
     return (f'<h1>{e(c["title"])}</h1>\n'
             f'<p class="sub">{e(c["tagline"])}</p>\n'
+            f'{render_byline(c["footer"])}\n'
             f'<ul class="chips">\n{chips}\n</ul>\n'
-            f'<p class="result">{e(c["result"])}</p>')
+            f'<p class="result"><span class="label">What is it?</span>{e(c["result"])}</p>')
 
 
 def render_prose(heading: str, paragraphs, pre: str = "", post: str = "") -> str:
@@ -70,17 +88,14 @@ def render_prose(heading: str, paragraphs, pre: str = "", post: str = "") -> str
     return "\n".join(chunks)
 
 
-def render_footer(f: dict) -> str:
-    link = f.get("link", "")
-    if link.startswith(("http://", "https://")):
-        linked = f'<a href="{e(link)}">{e(link)}</a>'
-    else:
-        linked = f"<span>{e(link)}</span>"
-    return ("<footer>\n"
-            f'  <span>{e(f["name"])}</span>\n'
-            f'  <span>{e(f["email"])}</span>\n'
-            f"  {linked}\n"
-            "</footer>")
+def render_bullets(heading: str, items) -> str:
+    """A bulleted section. Out-of-Scope reads as a list of choices, not a paragraph."""
+    items = list(items or [])
+    if not items:
+        return ""
+    lis = "\n".join(f"    <li>{prose(x)}</li>" for x in items)
+    return (f"<section>\n  <h2>{e(heading)}</h2>\n"
+            f'  <ul class="bullets">\n{lis}\n  </ul>\n</section>')
 
 
 def data_uri(path: Path) -> str | None:
@@ -142,20 +157,29 @@ def render_diagram(d: dict, base: Path) -> str:
                   d.get("caption", ""))
 
 
-def render_shots(shots, base: Path) -> str:
-    shots = list(shots or [])
-    if not shots:
+def render_gallery(items, base: Path) -> str:
+    """2 to 5 equal images, one sentence each. Column count is derived from the count.
+
+    Each image expands with no JavaScript: the thumbnail links to its own figure, and
+    `.shot:target img` in the stylesheet lifts that same img into a fixed overlay. Nothing
+    is duplicated, so a five image gallery costs no more payload than the thumbnails do.
+    """
+    items = list(items or [])
+    if not items:
         return ""
+    cols = 3 if len(items) in (3, 5) else 2
     figs = []
-    for i, s in enumerate(shots, 1):
+    for i, s in enumerate(items, 1):
         uri = data_uri(base / s["src"])
         if uri:
-            cls, media = "shot", f'      <img src="{uri}" alt="Screenshot {i}">'
+            media = (f'      <a class="zoom" href="#shot-{i}">'
+                     f'<img src="{uri}" alt="Screenshot {i}"></a>\n'
+                     f'      <a class="close" href="#gallery">Close</a>')
         else:
-            cls, media = "shot missing", f'      <div class="slot">{e(s["src"])}</div>'
-        figs.append(f'    <figure class="{cls}">\n{media}\n'
+            media = f'      <div class="slot">{e(s["src"])}</div>'
+        figs.append(f'    <figure class="shot" id="shot-{i}">\n{media}\n'
                     f'      <figcaption>{e(s["caption"])}</figcaption>\n    </figure>')
-    return ('<section>\n  <h2>In use</h2>\n  <div class="shots">\n'
+    return (f'<section id="gallery">\n  <h2>Gallery</h2>\n  <div class="gallery cols{cols}">\n'
             + "\n".join(figs) + "\n  </div>\n</section>")
 
 
@@ -189,11 +213,11 @@ def render(content: dict, base: Path, no_backgrounds: bool = False) -> str:
         render_prose("Problem", content["problem"]),
         render_prose("Architecture", content["architecture"],
                      post=render_diagram(content["diagram"], base)),
-        render_shots(content.get("shots", []), base),
         render_decisions(content["decisions"]),
         render_prose("Impact", content["impact"],
                      pre=render_metrics(content.get("metrics", []))),
-        render_prose("Limits and next step", content["limits"]),
+        render_gallery(content.get("gallery", []), base),
+        render_bullets("Out-of-Scope", content["out_of_scope"]),
         render_footer(content["footer"]),
     ] if part)
     shell = (ASSETS / "shell.html").read_text(encoding="utf-8")

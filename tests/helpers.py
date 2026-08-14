@@ -1,4 +1,4 @@
-"""Shared test helpers: the golden normaliser, and a mutable valid content fixture."""
+"""Shared test helpers: the snapshot normaliser, and a mutable valid content fixture."""
 import copy
 import json
 import re
@@ -8,29 +8,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = ROOT / "tests" / "fixtures"
 
-# The four declared normalisations. Everything else must match exactly.
+# Version 3 compares the renderer against its own committed snapshot, so the version 1
+# bridging normalisations (placeholder spans, footer flattening) are gone. What remains
+# tolerates images arriving later: a real screenshot replaces a named slot with an <img>,
+# and neither should fail a design snapshot.
 NOISE = (
-    re.compile(r"<img\b[^>]*>", re.S),                       # 1. build-time inlining
-    re.compile(r'<div class="slot">.*?</div>', re.S),        # 2. missing-image is now static
+    re.compile(r"<img\b[^>]*>", re.S),
+    re.compile(r'<div class="slot">.*?</div>', re.S),
+    re.compile(r'<a class="(?:zoom|close)"[^>]*>|</a>', re.S),
 )
-PH_SPAN = re.compile(r'<span class="ph">(.*?)</span>', re.S)  # 3. no placeholder markup
-FOOTER = re.compile(r"<footer>(.*?)</footer>", re.S)          # 4. link becomes an anchor
-
-# Version 1 added .missing at runtime via onerror; version 2 decides it at build time.
-# Same change as 2, so the class carries no signal for this comparison.
-IGNORED_CLASSES = {"ph", "missing"}
 
 
 def normalise(doc: str) -> str:
     for pat in NOISE:
         doc = pat.sub("", doc)
-    doc = PH_SPAN.sub(r"\1", doc)
-
-    def flatten(m):
-        text = " ".join(re.sub(r"<[^>]+>", " ", m.group(1)).split())
-        return f"<footer>{text}</footer>"
-
-    return FOOTER.sub(flatten, doc)
+    return doc
 
 
 class _Doc(HTMLParser):
@@ -49,7 +41,6 @@ class _Doc(HTMLParser):
             if tag == "div" and "doc" in classes:
                 self.depth = 0
             return
-        classes -= IGNORED_CLASSES
         self.tokens.append((tag, " ".join(sorted(classes)), a.get("data-label", "")))
         if tag not in self.VOID:
             self.depth += 1

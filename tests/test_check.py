@@ -36,11 +36,11 @@ class SchemaTest(unittest.TestCase):
 
     def test_missing_required_field_fails(self):
         c = content()
-        del c["limits"]
-        self.assertTrue(any("limits" in x for x in check_schema(c)))
+        del c["out_of_scope"]
+        self.assertTrue(any("out_of_scope" in x for x in check_schema(c)))
 
     def test_empty_required_field_fails(self):
-        self.assertTrue(any("limits" in x for x in check_schema(content(limits=[]))))
+        self.assertTrue(any("out_of_scope" in x for x in check_schema(content(out_of_scope=[]))))
 
     def test_wrong_type_fails(self):
         self.assertTrue(any("problem" in x for x in check_schema(content(problem="a string"))))
@@ -51,8 +51,8 @@ class BudgetTest(unittest.TestCase):
         self.assertEqual(check_budgets(content()), [])
 
     def test_section_over_its_budget_fails(self):
-        c = content(limits=["word " * (BUDGETS["limits"] + 5)])
-        self.assertTrue(any("limits" in x for x in check_budgets(c)))
+        c = content(out_of_scope=["word " * (BUDGETS["out_of_scope"] + 5)])
+        self.assertTrue(any("out_of_scope" in x for x in check_budgets(c)))
 
     def test_total_over_the_hard_limit_fails(self):
         c = content(architecture=["word " * 400])
@@ -132,6 +132,52 @@ class QualityBarTest(unittest.TestCase):
         c = content()
         del c["metrics"]
         self.assertEqual(check_counts(c), [])
+
+
+class GalleryTest(unittest.TestCase):
+    """2 to 5 images, one sentence each. Counts are enforced now, not advised."""
+
+    def shots(self, n: int):
+        return [{"src": "pixel.png", "caption": f"Proof number {i}."} for i in range(n)]
+
+    def test_two_to_five_images_pass(self):
+        for n in (2, 3, 4, 5):
+            self.assertEqual(check_counts(content(gallery=self.shots(n))), [], f"{n} images")
+
+    def test_no_gallery_at_all_is_fine(self):
+        c = content()
+        del c["gallery"]
+        self.assertEqual(check_counts(c), [])
+
+    def test_a_single_image_fails(self):
+        self.assertTrue(any("gallery" in x for x in check_counts(content(gallery=self.shots(1)))))
+
+    def test_six_images_fails(self):
+        self.assertTrue(any("gallery" in x for x in check_counts(content(gallery=self.shots(6)))))
+
+    def test_a_caption_of_fourteen_words_passes(self):
+        cap = " ".join(["word"] * 13) + " end."
+        self.assertEqual(check_counts(content(gallery=[{"src": "a.png", "caption": cap},
+                                                       {"src": "b.png", "caption": "Short."}])), [])
+
+    def test_a_caption_of_fifteen_words_fails(self):
+        cap = " ".join(["word"] * 14) + " end."
+        errors = check_counts(content(gallery=[{"src": "a.png", "caption": cap},
+                                               {"src": "b.png", "caption": "Short."}]))
+        self.assertTrue(any("caption" in x for x in errors), errors)
+
+    def test_the_fifty_word_pool_is_what_limits_five_images(self):
+        """Five captions at the 14 word cap would be 70, so the pool still binds."""
+        cap = " ".join(["word"] * 13) + " end."
+        c = content(gallery=[{"src": f"{i}.png", "caption": cap} for i in range(5)])
+        self.assertTrue(any("gallery" in x for x in check_budgets(c)))
+
+
+class IdentityBudgetTest(unittest.TestCase):
+    def test_identity_is_counted_twice_because_it_prints_twice(self):
+        f = content()["footer"]
+        once = words(f["name"], f["email"], f["link"])
+        self.assertEqual(words(*section_texts(content())["identity"]), once * 2)
 
 
 class WarningTest(unittest.TestCase):

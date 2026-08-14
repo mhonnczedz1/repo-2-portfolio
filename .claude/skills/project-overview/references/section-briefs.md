@@ -17,6 +17,21 @@ understand it.
 - Strong: "A question-answering service that lets separate teams upload their own documents and
   query only their own."
 
+## Result callout (`result`)
+
+The most prominent element on the page, labelled `WHAT IS IT?` and set in the accent box directly
+under the chips. It answers "why keep reading" in one sentence: the single thing that makes this
+project different from the tutorial version of the same idea. A defensible number belongs here
+when you have one.
+
+- Weak: "A quiz app that turns PDFs into quizzes." (the tagline already said this)
+- Strong: "Fully self-hosted: chunking, embedding, retrieval and generation all run on the host,
+  so tenant documents never leave the machine."
+
+The failure mode is restating the tagline or the architecture. If deleting this line would lose
+nothing, it is not doing its job. It shares the 60 word header budget with the title, tagline and
+chips, so one sentence is the whole allowance.
+
 ## Problem, 75 words
 
 The cost of the old path, in units. Time, money, or risk. Who was actually hurting.
@@ -68,12 +83,18 @@ Those are the ones an interviewer follows up on, and having an answer ready is t
 Note that the strong version names the cost implicitly by naming what it bought. Where the cost
 is real, say it: "accepting slower generation and manual model management".
 
-## Screenshot captions, 50 words
+## Gallery captions, 50 words total, 14 words each
 
-Two, three at most. The caption says what the screen **proves**, not what it contains.
+Two to five images. Each caption is **one sentence** saying what the screen **proves**, not what
+it contains. The 50 word pool is shared, so two images can spend 14 words each while five have to
+average ten.
 
 - Weak: "The upload page."
 - Strong: "Batch upload of 20 receipts stays responsive; extraction runs off the main thread."
+
+Three or five images render three across, two or four render two across, so an odd count is fine.
+Images expand when clicked, which means a dense screen is still readable at grid size, but the
+caption has to work without expanding.
 
 A missing image file renders as a dashed box showing the expected filename, so the layout never
 collapses while you are still gathering screenshots.
@@ -91,21 +112,15 @@ For a personal project with no users, the honest line is what it taught you or w
 can build. Not a fabricated adoption number. An interviewer who catches one invented figure will
 discount every other claim on the page.
 
-## Limits and next step, 30 words
+## Out-of-Scope, 30 words
 
-Pick a real one: single-node only, no auth on an endpoint, cost per call at volume, model swap
-untested. Then the one change that would fix it.
+Bullets. What you deliberately did not build and why that was the right call, then the one real
+constraint as a consequence.
 
-Stating where it breaks is what makes the other claims believable. This section is short, and it
-does more work per word than any other.
+- Weak: "Not production ready, needs more work."
+- Strong: "No auth on either endpoint, since the target was one trusted deploy. Sessions live in
+  memory, so it runs on a single node. Next: an API key per namespace."
 
----
-
-## The bar, in one list
-
-- Name components and the data between them. A feature list is a failed architecture section.
-- Every decision names the rejected alternative and the cost accepted.
-- No invented numbers. `TODO(verify)` and move on.
-- Concrete over superlative. "Handles ~120 alerts/month" beats "highly scalable".
-- One honest limit.
-- Delete sections that do not apply rather than padding them.
+Scoping choices read as judgment. A constraint you name yourself reads as knowing your own
+system. A vague apology reads as neither. This section is short and does more work per word than
+any other.

@@ -17,13 +17,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-BUDGETS = {"header": 60, "problem": 75, "architecture": 190, "diagram": 55,
-           "shots": 50, "decisions": 140, "impact": 85, "limits": 30, "footer": 7}
+BUDGETS = {"header": 60, "identity": 14, "problem": 75, "architecture": 190, "diagram": 55,
+           "gallery": 50, "decisions": 140, "impact": 85, "out_of_scope": 30}
 TOTAL = 700
 TODO = "TODO(verify)"
+CAPTION_WORDS = 14          # a gallery caption is one sentence, not a paragraph
+GALLERY_MAX = 5
 REQUIRED = {"slug": str, "title": str, "tagline": str, "chips": list, "result": str,
             "problem": list, "architecture": list, "diagram": dict, "decisions": list,
-            "impact": list, "limits": list, "footer": dict}
+            "impact": list, "out_of_scope": list, "footer": dict}
 
 
 def words(*texts) -> int:
@@ -40,19 +42,21 @@ def section_texts(c: dict) -> dict:
         for n in tier.get("nodes", []):
             diagram += [n.get("text", ""), n.get("note") or ""]
     f = c.get("footer") or {}
+    identity = [f.get("name", ""), f.get("email", ""), f.get("link", "")]
     return {
         "header": [c.get("title", ""), c.get("tagline", ""), c.get("result", "")]
                   + [f'{ch.get("label", "")} {ch.get("value", "")}' for ch in c.get("chips", [])],
+        # printed twice, in the header byline and in the footer, so counted twice
+        "identity": identity * 2,
         "problem": list(c.get("problem", [])),
         "architecture": list(c.get("architecture", [])),
         "diagram": diagram,
-        "shots": [s.get("caption", "") for s in c.get("shots", [])],
+        "gallery": [s.get("caption", "") for s in c.get("gallery", [])],
         "decisions": [f'{x.get("chose", "")} over {x.get("over", "")} {x.get("because", "")}'
                       for x in c.get("decisions", [])],
         "impact": list(c.get("impact", []))
                   + [f'{m.get("value", "")} {m.get("label", "")}' for m in c.get("metrics", [])],
-        "limits": list(c.get("limits", [])),
-        "footer": [f.get("name", ""), f.get("email", ""), f.get("link", "")],
+        "out_of_scope": list(c.get("out_of_scope", [])),
     }
 
 
@@ -134,6 +138,14 @@ def check_counts(c: dict) -> list:
         out.append(f"chips: {len(c['chips'])}, keep it to 5")
     if len(c.get("metrics", [])) == 1:
         out.append("metrics: one tile looks like a stray number. Use 2, 3, or none")
+    gallery = c.get("gallery") or []
+    if gallery and not 2 <= len(gallery) <= GALLERY_MAX:
+        out.append(f"gallery: {len(gallery)} images. Use 2 to {GALLERY_MAX}, or omit the section")
+    for i, s in enumerate(gallery, 1):
+        n = words(s.get("caption", ""))
+        if n > CAPTION_WORDS:
+            out.append(f"gallery: caption {i} is {n} words, cap {CAPTION_WORDS}. "
+                       "One sentence saying what the screen proves")
     return out
 
 
@@ -144,9 +156,6 @@ def warnings(c: dict) -> list:
         out.append(f"{outstanding} unresolved {TODO} claim(s). Resolve or delete before sending")
     if len(c.get("decisions", [])) > 4:
         out.append(f"decisions: {len(c['decisions'])} bullets, 3 to 4 reads better")
-    shots = len(c.get("shots", []))
-    if shots and not 2 <= shots <= 3:
-        out.append(f"shots: {shots} screenshots, 2 or 3 earn the space")
     for i, tier in enumerate((c.get("diagram") or {}).get("tiers", []), 1):
         n = len(tier.get("nodes", []))
         if not 3 <= n <= 5:

@@ -4,8 +4,8 @@
   "tagline": "A question-answering service where separate teams upload their own documents and query only their own.",
   "chips": [
     {
-      "label": "Role",
-      "value": "solo build"
+      "label": "Scope",
+      "value": "ingest, retrieval, API, deploy"
     },
     {
       "label": "Timeline",
@@ -96,16 +96,6 @@
       }
     ]
   },
-  "shots": [
-    {
-      "src": "images/01-ingest.png",
-      "caption": "Ingest returns chunk count and namespace, the two things needed to debug a bad answer."
-    },
-    {
-      "src": "images/02-namespaces.png",
-      "caption": "The same question in two namespaces returns answers from each tenant's own documents only."
-    }
-  ],
   "decisions": [
     {
       "chose": "Namespaces",
@@ -128,17 +118,6 @@
       "because": "follow-ups work with no schema to maintain, at the cost of losing history on restart."
     }
   ],
-  "impact": [
-    "Stateless retrieval endpoints became a usable conversation: upload over HTTP, then ask follow-ups in the bundled interface without restating context. The isolation model is the reusable part, the problem row-level security solves in a relational database, handled at the vector layer and skipped by most retrieval examples. TODO(verify) ingest volume and median answer latency from local runs."
-  ],
-  "limits": [
-    "Single node, no authentication on either endpoint, and sessions live in memory. Next: an API key per namespace."
-  ],
-  "footer": {
-    "name": "Mhonn Czedrick Ybañez",
-    "email": "you@example.com",
-    "link": "repo link"
-  },
   "metrics": [
     {
       "value": "95%",
@@ -152,5 +131,28 @@
       "value": "4 min",
       "label": "per document, was 2 hours"
     }
-  ]
+  ],
+  "impact": [
+    "Stateless retrieval endpoints became a usable conversation: upload over HTTP, then ask follow-ups in the bundled interface without restating context. The isolation model is the reusable part, the problem row-level security solves in a relational database, handled at the vector layer and skipped by most retrieval examples. TODO(verify) ingest volume and median answer latency from local runs."
+  ],
+  "gallery": [
+    {
+      "src": "images/01-ingest.png",
+      "caption": "Ingest returns the chunk count and the namespace it wrote to."
+    },
+    {
+      "src": "images/02-namespaces.png",
+      "caption": "The same question in two namespaces returns only that tenant's documents."
+    }
+  ],
+  "out_of_scope": [
+    "No auth on either endpoint, since the target was one trusted deploy.",
+    "Sessions live in memory, so it runs on a single node.",
+    "Next: an API key per namespace."
+  ],
+  "footer": {
+    "name": "Mhonn Czedrick Ybañez",
+    "email": "you@example.com",
+    "link": "repo link"
+  }
 }

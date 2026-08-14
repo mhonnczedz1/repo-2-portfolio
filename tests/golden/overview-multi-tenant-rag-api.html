@@ -4,140 +4,237 @@
 <meta charset="utf-8">
 <title>Multi-Tenant RAG Documents API</title>
 <style>
+
+  /* ---------- tokens ---------- */
   :root{
     --ink:#16181d; --body:#2c3138; --muted:#6b7280; --rule:#d7dbe0;
     --tint:#f6f8fa; --accent:#7c3aed; --accent-tint:#f7f3ff; --warn:#b45309;
+    --page:860px;          /* screen page width. Print ignores this and uses A4 */
+    --gutter:68px;         /* diagram tier label column */
   }
   @page{ size:A4; margin:14mm; }
   *{ box-sizing:border-box; }
   html{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   body{
     margin:0; background:#eceef1; color:var(--body);
-    font:10.5pt/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    font:11pt/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
   }
-  .doc{ max-width:182mm; margin:24px auto; padding:16mm 14mm; background:#fff;
-        box-shadow:0 1px 4px rgba(0,0,0,.12); }
+  .doc{ max-width:var(--page); margin:48px auto 72px; padding:72px 80px; background:#fff;
+        box-shadow:0 1px 3px rgba(0,0,0,.07), 0 10px 30px rgba(0,0,0,.05); }
 
-  .banner{ max-width:182mm; margin:24px auto -8px; padding:10px 14px; border:1px solid #c7d2fe;
-           background:#eef2ff; border-radius:6px; font-size:9pt; color:#3730a3; }
+  /* ---------- screen-only usage banner: never prints ---------- */
+  .banner{ max-width:var(--page); margin:32px auto -12px; padding:12px 16px;
+           border:1px solid #c7d2fe; background:#eef2ff; border-radius:6px; font-size:9.5pt;
+           line-height:1.55; color:#3730a3; }
   .banner b{ color:#312e81; }
   .banner code{ background:#fff; padding:1px 4px; border-radius:3px; }
 
-  h1{ font-size:19pt; line-height:1.15; margin:0 0 4px; color:var(--ink); letter-spacing:-.01em; }
-  .sub{ font-size:11pt; color:var(--body); margin:0 0 10px; }
-  .chips{ display:flex; flex-wrap:wrap; gap:5px; margin:0 0 12px; padding:0; list-style:none; }
-  .chip{ font-size:8pt; letter-spacing:.02em; color:var(--muted); border:1px solid var(--rule);
-         border-radius:3px; padding:2px 6px; background:var(--tint); }
+  /* ---------- header ---------- */
+  h1{ font-size:24pt; line-height:1.12; margin:0 0 10px; color:var(--ink); letter-spacing:-.015em; }
+  .sub{ font-size:10pt; font-style:italic; line-height:1.5; color:var(--body); margin:0 0 14px; }
+  /* identity, repeated in the footer: a reader who never scrolls still knows whose this is */
+  .byline{ display:flex; flex-wrap:wrap; gap:14px; font-size:8.5pt; color:var(--muted);
+           margin:0 0 24px; }
+  .byline span:first-child{ color:var(--body); font-weight:600; }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 26px; padding:0; list-style:none; }
+  .chip{ font-size:8.5pt; letter-spacing:.02em; color:var(--muted); border:1px solid var(--rule);
+         border-radius:3px; padding:4px 9px; background:var(--tint); }
   .chip b{ color:var(--body); font-weight:600; }
   .result{ border-left:3px solid var(--accent); background:var(--accent-tint);
-           padding:8px 12px; font-size:10.5pt; color:var(--ink); margin:0 0 18px; }
+           padding:16px 20px; font-size:11.5pt; line-height:1.55; color:var(--ink);
+           margin:0 0 42px; }
+  /* fixed label, the same kind of furniture as a section heading: never counted */
+  .result .label{ display:block; font-size:8pt; text-transform:uppercase; letter-spacing:.1em;
+                  font-weight:700; color:var(--accent); margin-bottom:6px; }
 
-  section{ margin:0 0 16px; }
-  h2{ font-size:8.5pt; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
-      margin:0 0 7px; padding-bottom:4px; border-bottom:1px solid var(--rule); font-weight:700; }
-  p{ margin:0 0 8px; }
-  .ph{ color:var(--warn); }
-  code{ font:9.5pt ui-monospace,SFMono-Regular,Menlo,monospace; }
+  /* ---------- sections ---------- */
+  section{ margin:0 0 42px; }
+  h2{ font-size:9pt; text-transform:uppercase; letter-spacing:.1em; color:var(--muted);
+      margin:0 0 16px; padding-bottom:9px; border-bottom:1px solid var(--rule); font-weight:700; }
+  p{ margin:0 0 14px; }
+  p:last-child{ margin-bottom:0; }
 
+  /* inline code: tint plus border, so it still reads with background graphics off */
+  code{ font:9.5pt/1.4 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--ink);
+        background:var(--tint); border:1px solid var(--rule); border-radius:4px;
+        padding:1px 5px; }
+
+  /* ---------- decisions ---------- */
   ul.decisions{ margin:0; padding:0; list-style:none; }
-  ul.decisions li{ margin:0 0 7px; padding-left:13px; position:relative; break-inside:avoid; }
+  ul.decisions li{ margin:0 0 13px; padding-left:16px; position:relative; break-inside:avoid; }
+  ul.decisions li:last-child{ margin-bottom:0; }
   ul.decisions li::before{ content:"\25B8"; position:absolute; left:0; color:var(--accent); }
   ul.decisions b{ color:var(--ink); }
 
-  .metrics{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:2px 0 10px; }
-  .metric{ border:1px solid var(--rule); border-radius:5px; padding:8px 10px; break-inside:avoid; }
-  .metric .val{ font-size:15pt; font-weight:700; color:var(--ink); line-height:1.1; }
-  .metric .lbl{ font-size:8pt; color:var(--muted); }
+  /* ---------- plain bullet list, used by Out-of-Scope ---------- */
+  ul.bullets{ margin:0; padding:0; list-style:none; }
+  ul.bullets li{ margin:0 0 9px; padding-left:16px; position:relative; break-inside:avoid; }
+  ul.bullets li:last-child{ margin-bottom:0; }
+  ul.bullets li::before{ content:"\25B8"; position:absolute; left:0; color:var(--muted); }
 
-  .arch{ border:1px solid var(--rule); border-radius:6px; padding:12px 14px; background:#fcfdfe; }
-  .tier{ display:flex; align-items:stretch; flex-wrap:wrap; gap:8px; }
-  .tier::before{ content:attr(data-label); flex:none; width:62px; align-self:center;
-                 text-align:right; font-size:7.5pt; text-transform:uppercase; letter-spacing:.06em;
+  /* ---------- metrics (optional, 2 or 3) ---------- */
+  .metrics{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:4px 0 26px; }
+  .metrics.two{ grid-template-columns:repeat(2,1fr); }
+  .metric{ border:1px solid var(--rule); border-radius:6px; padding:16px 18px; break-inside:avoid; }
+  .metric .val{ font-size:18pt; font-weight:700; color:var(--ink); line-height:1.1; }
+  .metric .lbl{ font-size:8.5pt; color:var(--muted); margin-top:2px; }
+
+  /* ---------- architecture diagram kit ---------- */
+  .arch{ border:1px solid var(--rule); border-radius:7px; padding:24px 26px; background:#fcfdfe; }
+  .tier{ display:flex; align-items:stretch; flex-wrap:wrap; gap:12px; }
+  .tier::before{ content:attr(data-label); flex:none; width:var(--gutter); align-self:center;
+                 text-align:right; font-size:8pt; text-transform:uppercase; letter-spacing:.06em;
                  color:var(--muted); font-weight:700; }
-  .node{ display:flex; flex-direction:column; gap:1px; break-inside:avoid;
-         border:1px solid #b9c0c9; border-radius:5px; padding:5px 9px; background:#fff;
-         font-size:9.5pt; font-weight:600; color:var(--ink); }
-  .node .note{ font-size:7.5pt; font-weight:400; color:var(--muted); }
+  .node{ display:flex; flex-direction:column; gap:2px; break-inside:avoid;
+         border:1px solid #b9c0c9; border-radius:6px; padding:7px 11px; background:#fff;
+         font-size:10pt; font-weight:600; color:var(--ink); }
+  .node .note{ font-size:8pt; font-weight:400; color:var(--muted); }
   .node.core{ border-width:2px; border-color:var(--ink); }
   .node.ext{ border-style:dashed; background:var(--tint); }
-  .node.store{ border-radius:13px; background:var(--tint); }
+  .node.store{ border-radius:15px; background:var(--tint); }
   .node.ai{ border-color:var(--accent); background:var(--accent-tint); }
   .arrow{ align-self:center; color:var(--muted); font-size:12pt; line-height:1; }
-  .arrow.down{ display:block; width:100%; margin:3px 0 3px 62px; }
-  .legend{ display:flex; flex-wrap:wrap; gap:12px; margin:10px 0 0 62px;
-           font-size:7.5pt; color:var(--muted); }
-  .legend span::before{ content:""; display:inline-block; width:9px; height:9px; margin-right:4px;
+  .arrow.down{ display:block; width:100%; margin:6px 0 6px var(--gutter); }
+  .legend{ display:flex; flex-wrap:wrap; gap:16px; margin:16px 0 0 var(--gutter);
+           font-size:8pt; color:var(--muted); }
+  .legend span::before{ content:""; display:inline-block; width:9px; height:9px; margin-right:5px;
                         border:1px solid #b9c0c9; border-radius:2px; vertical-align:-1px; }
   .legend .l-ext::before{ border-style:dashed; background:var(--tint); }
   .legend .l-ai::before{ border-color:var(--accent); background:var(--accent-tint); }
   .legend .l-store::before{ border-radius:6px; background:var(--tint); }
 
-  figure{ margin:0 0 12px; break-inside:avoid; }
-  figcaption{ font-size:8pt; color:var(--muted); margin-top:5px; }
+  /* ---------- figures ---------- */
+  figure{ margin:0 0 24px; break-inside:avoid; }
+  figure:last-child{ margin-bottom:0; }
+  figcaption{ font-size:8.5pt; line-height:1.5; color:var(--muted); margin-top:9px; }
   figcaption b{ color:var(--body); }
-  .shots{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .shot img{ display:block; width:100%; height:auto; border:1px solid var(--rule); border-radius:4px; }
-  .shot.missing img{ display:none; }
-  .shot.missing .slot{ display:flex; }
-  .slot{ display:none; align-items:center; justify-content:center; min-height:120px; padding:10px;
-         border:1px dashed #b9c0c9; border-radius:4px; background:var(--tint);
-         font:8.5pt ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted); text-align:center; }
 
-  footer{ margin-top:20px; padding-top:8px; border-top:1px solid var(--rule);
-          font-size:8pt; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap; }
+  /* ---------- gallery: 2 to 5 images, equal size, one line each ---------- */
+  .gallery{ display:grid; gap:26px 20px; }
+  .gallery.cols2{ grid-template-columns:repeat(2,1fr); }
+  .gallery.cols3{ grid-template-columns:repeat(3,1fr); }
+  .gallery figure{ margin:0; }
+  .shot img{ display:block; width:100%; height:auto; border:1px solid var(--rule);
+             border-radius:5px; }
 
+  /* expandable, with no JavaScript: :target lifts the same img into a fixed overlay,
+     so the base64 payload is never duplicated */
+  .shot .zoom{ display:block; cursor:zoom-in; }
+  .shot .zoom:hover img{ border-color:var(--accent); }
+  .shot .close{ display:none; }
+  .shot:target .close{ display:block; position:fixed; inset:0; z-index:60; cursor:zoom-out;
+                       background:rgba(16,18,22,.9); color:#fff; font-size:9pt; text-align:right;
+                       padding:18px 26px; text-decoration:none; border:0; }
+  .shot:target img{ position:fixed; z-index:61; top:50%; left:50%;
+                    transform:translate(-50%,-50%); width:auto; max-width:94vw; max-height:92vh;
+                    border-radius:6px; border-color:transparent;
+                    box-shadow:0 24px 60px rgba(0,0,0,.5); pointer-events:none; }
+  /* a missing file still holds its slot, so a half-finished overview lays out correctly */
+  .slot{ display:flex; align-items:center; justify-content:center; aspect-ratio:16/10;
+         padding:10px; border:1px dashed #b9c0c9; border-radius:5px; background:var(--tint);
+         font:8.5pt ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted);
+         text-align:center; }
+
+  footer{ margin-top:52px; padding-top:16px; border-top:1px solid var(--rule);
+          font-size:8.5pt; color:var(--muted); display:flex; flex-direction:column; gap:5px; }
+  footer span:first-child{ color:var(--body); font-weight:600; }
+  /* column flex blockifies its children, so keep them at content width and unruled */
+  footer > *{ align-self:flex-start; }
+  footer a{ color:var(--muted); text-decoration:none; }
+  .byline a{ color:var(--muted); text-decoration:none;
+             border-bottom:1px solid var(--rule); }
+
+  /* ---------- screen-only toolbar: never prints ---------- */
+  .toolbar{ max-width:var(--page); margin:32px auto -12px; padding:12px 16px;
+            border:1px solid #c7d2fe; background:#eef2ff; border-radius:6px; font-size:9.5pt;
+            color:#3730a3; display:flex; align-items:center; gap:14px; }
+  .printbtn{ font:inherit; font-weight:600; color:#fff; background:var(--accent); border:0;
+             border-radius:5px; padding:7px 14px; cursor:pointer; }
+  .printbtn:hover{ background:#6d28d9; }
+  .toolbar .hint{ color:#4338ca; }
+
+  /* ---------- print: compact the screen design back onto 2 A4 pages ---------- */
   @media print{
-    body{ background:#fff; font-size:10pt; }
+    body{ background:#fff; font-size:10pt; line-height:1.45; }
     .doc{ max-width:none; margin:0; padding:0; box-shadow:none; }
-    .banner{ display:none; }
+    .banner, .toolbar{ display:none; }
+
+    h1{ font-size:19pt; margin:0 0 4px; }
+    .sub{ font-size:9.5pt; margin:0 0 8px; }
+    .byline{ gap:12px; margin:0 0 12px; font-size:8pt; }
+    .chips{ gap:5px; margin:0 0 12px; }
+    .chip{ font-size:8pt; padding:2px 6px; }
+    .result{ padding:8px 12px; font-size:10.5pt; margin:0 0 18px; }
+    .result .label{ font-size:7.5pt; margin-bottom:4px; }
+
+    section{ margin:0 0 15px; }
+    h2{ font-size:8.5pt; margin:0 0 7px; padding-bottom:4px; break-after:avoid; }
+    p{ margin:0 0 8px; }
+    code{ font-size:9pt; padding:0 3px; }
+    ul.decisions li{ margin:0 0 7px; padding-left:13px; }
+
+    .metrics{ gap:8px; margin:2px 0 10px; }
+    .metric{ padding:8px 10px; }
+    .metric .val{ font-size:15pt; }
+    .metric .lbl{ font-size:8pt; }
+
+    .arch{ padding:12px 14px; }
+    .tier{ gap:8px; }
+    .tier::before{ width:62px; font-size:7.5pt; }
+    .node{ padding:5px 9px; font-size:9.5pt; }
+    .node .note{ font-size:7.5pt; }
+    .arrow.down{ margin:3px 0 3px 62px; }
+    .legend{ gap:12px; margin:10px 0 0 62px; font-size:7.5pt; }
+
+    figure{ margin:0 0 12px; }
+    figcaption{ font-size:8pt; margin-top:5px; }
+    .gallery{ gap:12px 10px; }
+    ul.bullets li{ margin:0 0 6px; padding-left:13px; }
+    /* an expanded image must never reach the PDF */
+    .shot .zoom{ cursor:auto; }
+    .shot .close{ display:none !important; }
+    .shot:target img{ position:static; transform:none; max-width:100%; max-height:none;
+                      border-color:var(--rule); box-shadow:none; border-radius:5px; }
+
+    footer{ margin-top:22px; padding-top:8px; font-size:8pt; gap:3px; }
+
     section, figure, .arch, .metric{ break-inside:avoid; }
-    h2{ break-after:avoid; }
     a{ color:inherit; text-decoration:none; }
   }
+
 </style>
 </head>
 <body>
-
-<div class="banner">
-  <b>Worked example.</b> Written from the project summary, not from the repo, so the two
-  <code>TODO(verify)</code> lines need confirming or deleting before this goes out. Screenshots are
-  not in <code>images/</code> yet, so both slots show their expected filename. This banner never prints.
+<div class="toolbar">
+  <button type="button" class="printbtn" onclick="window.print()">Save as PDF</button>
+  <span class="hint">A4, two pages. Reads correctly with background graphics on or off.</span>
 </div>
-
 <div class="doc">
-
 <h1>Multi-Tenant RAG Documents API</h1>
-<p class="sub">A question-answering service where separate teams upload their own documents and
-query only their own.</p>
+<p class="sub">A question-answering service where separate teams upload their own documents and query only their own.</p>
+<p class="byline">
+  <span>Mhonn Czedrick Ybañez</span>
+  <span>you@example.com</span>
+  <span>repo link</span>
+</p>
 <ul class="chips">
-  <li class="chip"><b>Role</b> solo build</li>
+  <li class="chip"><b>Scope</b> ingest, retrieval, API, deploy</li>
   <li class="chip"><b>Timeline</b> Aug 2026</li>
   <li class="chip"><b>Status</b> working prototype, self-hosted</li>
-  <li class="chip"><b>Scale</b> <span class="ph">TODO(verify) documents ingested</span></li>
+  <li class="chip"><b>Scale</b> TODO(verify) documents ingested</li>
   <li class="chip"><b>Stack</b> FastAPI, ChromaDB, Ollama, Python</li>
 </ul>
-<p class="result">Fully self-hosted: chunking, embedding, retrieval and generation all run on the
-host, so tenant documents never leave the machine.</p>
+<p class="result"><span class="label">What is it?</span>Fully self-hosted: chunking, embedding, retrieval and generation all run on the host, so tenant documents never leave the machine.</p>
 
 <section>
   <h2>Problem</h2>
-  <p>Teams sit on piles of internal documents they cannot search by meaning, and pasting them into a
-  hosted chat tool moves private material off-premise. Most retrieval examples assume one corpus and
-  one user, so two teams sharing an instance would read each other's files.</p>
+  <p>Teams sit on piles of internal documents they cannot search by meaning, and pasting them into a hosted chat tool moves private material off-premise. Most retrieval examples assume one corpus and one user, so two teams sharing an instance would read each other&#x27;s files.</p>
 </section>
 
 <section>
   <h2>Architecture</h2>
-  <p><code>/ingest</code> takes a document and a namespace, splits the text into overlapping chunks so
-  a passage spanning a boundary stays retrievable, embeds each chunk with a local Ollama model, and
-  writes the vectors into ChromaDB scoped to that namespace. <code>/ask</code> embeds the question,
-  retrieves the closest chunks within a single namespace, and hands them plus the session's recent
-  turns to the local generation model.</p>
-  <p>Namespace is required on both paths, so a cross-tenant read is not a permission check that can be
-  misconfigured; it is a query that cannot be expressed. Chunking and retrieval are deterministic
-  Python and the model is called only twice, to embed and to answer, so a wrong answer stays traceable
-  to the chunks it cited.</p>
-
+  <p><code>/ingest</code> takes a document and a namespace, splits the text into overlapping chunks so a passage spanning a boundary stays retrievable, embeds each chunk with a local Ollama model, and writes the vectors into ChromaDB scoped to that namespace. <code>/ask</code> embeds the question, retrieves the closest chunks within a single namespace, and hands them plus the session&#x27;s recent turns to the local generation model.</p>
+  <p>Namespace is required on both paths, so a cross-tenant read is not a permission check that can be misconfigured; it is a query that cannot be expressed. Chunking and retrieval are deterministic Python and the model is called only twice, to embed and to answer, so a wrong answer stays traceable to the chunks it cited.</p>
   <figure>
     <div class="arch">
       <div class="tier" data-label="Ingest">
@@ -167,66 +264,53 @@ host, so tenant documents never leave the machine.</p>
         <span class="l-store">datastore</span>
       </div>
     </div>
-    <figcaption><b>Fig 1.</b> Both model calls stay local; the namespace narrows retrieval before
-    generation.</figcaption>
+    <figcaption><b>Fig 1.</b> Both model calls stay local; the namespace narrows retrieval before generation.</figcaption>
   </figure>
-</section>
-
-<section>
-  <h2>In use</h2>
-  <div class="shots">
-    <figure class="shot">
-      <img src="images/01-ingest.png" alt="Ingest response"
-           onerror="this.closest('.shot').classList.add('missing')">
-      <div class="slot">images/01-ingest.png</div>
-      <figcaption>Ingest returns chunk count and namespace, the two things needed to debug a bad
-      answer.</figcaption>
-    </figure>
-    <figure class="shot">
-      <img src="images/02-namespaces.png" alt="Same question in two namespaces"
-           onerror="this.closest('.shot').classList.add('missing')">
-      <div class="slot">images/02-namespaces.png</div>
-      <figcaption>The same question in two namespaces returns answers from each tenant's own
-      documents only.</figcaption>
-    </figure>
-  </div>
 </section>
 
 <section>
   <h2>Decisions and tradeoffs</h2>
   <ul class="decisions">
-    <li><b>Namespaces over a collection per tenant:</b> one warm index instead of many, and isolation
-    becomes a property of the query rather than a setting someone can get wrong.</li>
-    <li><b>Local Ollama over a hosted model API:</b> no per-token cost and no document leaves the
-    host, accepting slower generation and manual model management.</li>
-    <li><b>Overlapping chunks over clean splits:</b> duplicated tokens in the index, but answers stop
-    being cut off at paragraph boundaries.</li>
-    <li><b>Per-session retention over a conversation store:</b> follow-ups work with no schema to
-    maintain, at the cost of losing history on restart.</li>
+    <li><b>Namespaces over a collection per tenant:</b> one warm index instead of many, and isolation becomes a property of the query rather than a setting someone can get wrong.</li>
+    <li><b>Local Ollama over a hosted model API:</b> no per-token cost and no document leaves the host, accepting slower generation and manual model management.</li>
+    <li><b>Overlapping chunks over clean splits:</b> duplicated tokens in the index, but answers stop being cut off at paragraph boundaries.</li>
+    <li><b>Per-session retention over a conversation store:</b> follow-ups work with no schema to maintain, at the cost of losing history on restart.</li>
   </ul>
 </section>
 
 <section>
   <h2>Impact</h2>
-  <p>Stateless retrieval endpoints became a usable conversation: upload over HTTP, then ask follow-ups
-  in the bundled interface without restating context. The isolation model is the reusable part, the
-  problem row-level security solves in a relational database, handled at the vector layer and skipped
-  by most retrieval examples.
-  <span class="ph">TODO(verify) ingest volume and median answer latency from local runs.</span></p>
+  <p>Stateless retrieval endpoints became a usable conversation: upload over HTTP, then ask follow-ups in the bundled interface without restating context. The isolation model is the reusable part, the problem row-level security solves in a relational database, handled at the vector layer and skipped by most retrieval examples. TODO(verify) ingest volume and median answer latency from local runs.</p>
+</section>
+
+<section id="gallery">
+  <h2>Gallery</h2>
+  <div class="gallery cols2">
+    <figure class="shot" id="shot-1">
+      <div class="slot">images/01-ingest.png</div>
+      <figcaption>Ingest returns the chunk count and the namespace it wrote to.</figcaption>
+    </figure>
+    <figure class="shot" id="shot-2">
+      <div class="slot">images/02-namespaces.png</div>
+      <figcaption>The same question in two namespaces returns only that tenant&#x27;s documents.</figcaption>
+    </figure>
+  </div>
 </section>
 
 <section>
-  <h2>Limits and next step</h2>
-  <p>Single node, no authentication on either endpoint, and sessions live in memory. Next: an API key
-  per namespace.</p>
+  <h2>Out-of-Scope</h2>
+  <ul class="bullets">
+    <li>No auth on either endpoint, since the target was one trusted deploy.</li>
+    <li>Sessions live in memory, so it runs on a single node.</li>
+    <li>Next: an API key per namespace.</li>
+  </ul>
 </section>
 
 <footer>
   <span>Mhonn Czedrick Ybañez</span>
   <span>you@example.com</span>
-  <span class="ph">repo link</span>
+  <span>repo link</span>
 </footer>
-
 </div>
 </body>
 </html>

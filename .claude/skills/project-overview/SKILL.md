@@ -43,12 +43,14 @@ credibility, and it is the thing an interviewer will probe first.
 
 Present that single list, plus the two things a repo never contains:
 
-1. **Screenshots.** Which screens to use, 2 or 3 at most. Copy them into
-   `overviews/<slug>/images/` as `01-<name>.png`, `02-`, `03-`. Around 1200px wide crops well
-   into the two-column grid. The caption says what the screen *proves*, not what it contains.
+1. **Gallery images.** Which screens to use, 2 to 5. Copy them into
+   `overviews/<slug>/images/` as `01-<name>.png`, `02-`, and so on. Around 1200px wide crops well
+   into the grid. Each caption is **one sentence, 14 words maximum**, saying what the screen
+   *proves*, not what it contains. The 50 word section pool is shared, so five images have to
+   average ten words each.
 2. **Footer identity.** Read `config.json` at the repo root if it exists and use it silently.
    If it does not exist, ask once for name, email, and repo or demo link, then write it there so
-   no later project asks again.
+   no later project asks again. It renders twice, in the header byline and in the footer.
 
 Anything the user skips becomes the literal text `TODO(verify)` in that field, followed by what
 to check. It stays visible in the draft, it does not count against the word budget, and
@@ -85,9 +87,11 @@ Tell the user three things:
 
 - The file is self-contained. Send it as is; images travel inside it.
 - The "Save as PDF" button works for them and for anyone they forward it to.
+- Gallery images expand when clicked, and close on the next click. No JavaScript is involved,
+  so it works even where inline handlers are blocked.
 - Two checks need human eyes, because no browser automation is available here: print preview
-  should land on 2 A4 pages with no orphaned headings, and screenshots should be legible at half
-  width in the two-column grid.
+  should land on 2 A4 pages with no orphaned headings, and gallery images should be legible at
+  grid size.
 
 ## Re-runs
 
@@ -104,7 +108,7 @@ Content only. No markup. Backticks become inline `<code>`, which is the only for
   "title": "Receipt OCR Pipeline",
   "tagline": "Plain language, no stack names, no adjectives. What it does and for whom.",
   "chips": [
-    {"label": "Role", "value": "solo build"},
+    {"label": "Scope", "value": "pipeline, API, deploy"},
     {"label": "Timeline", "value": "Mar 2026"},
     {"label": "Status", "value": "in production"},
     {"label": "Scale", "value": "TODO(verify) receipts processed"},
@@ -133,8 +137,9 @@ Content only. No markup. Backticks become inline `<code>`, which is the only for
       ]}
     ]
   },
-  "shots": [
-    {"src": "images/01-upload.png", "caption": "What this screen proves."}
+  "gallery": [
+    {"src": "images/01-upload.png", "caption": "What this screen proves, in one sentence."},
+    {"src": "images/02-review.png", "caption": "What the second screen proves."}
   ],
   "decisions": [
     {"chose": "Tesseract locally", "over": "a hosted vision API",
@@ -145,41 +150,52 @@ Content only. No markup. Backticks become inline `<code>`, which is the only for
     {"value": "3", "label": "teams using it"}
   ],
   "impact": ["Before and after in concrete terms, who uses it now, and what it replaced."],
-  "limits": ["One honest constraint, and the one change that would fix it."],
+  "out_of_scope": [
+    "What you deliberately did not build, and why that was the right call.",
+    "Next: the one change that would lift the real constraint."
+  ],
   "footer": {"name": "", "email": "", "link": "https://github.com/..."}
 }
 ```
 
 Field notes:
 
-- **Optional sections vanish.** Omit `metrics` and the tile grid does not render. Omit `shots`
+- **Optional sections vanish.** Omit `metrics` and the tile grid does not render. Omit `gallery`
   and the section disappears. Delete what does not apply rather than padding it.
+- **`gallery` takes 2 to 5 entries**, never 1. Three or five images render three across, two or
+  four render two across. Each image expands on click, with no JavaScript.
 - **`metrics` takes 0, 2, or 3 entries. Never 1**, which reads as a stray number.
+- **`chips` take 5 at most.** Use `Role` only when ownership is not obvious, such as a team or
+  internal project, where "one of four, owned retrieval" tells the reader something. On a solo
+  project spend the slot on `Scope` instead, since a portfolio one-pager already implies you
+  built it.
 - **Node `type`** is `core` (the centerpiece, exactly one per diagram), `ext` (third party,
   dashed), `store` (datastore, pill), `ai` (model step, accent), or omitted for something you
   wrote.
 - **`note`** carries the tech or the payload, never a sentence.
-- **`footer.link`** renders as a clickable anchor only when it starts with `http`.
+- **`footer.link`** renders as a clickable anchor only when it starts with `http`. The identity
+  prints twice, in the header byline and the footer, and is budgeted for both.
 
 ## Word budget
 
-700 printed words hard, 692 budgeted. Everything that prints counts, including chip labels,
-diagram node labels, captions and the footer. `check.py` is the authority; this table is the
-guide for how to spend it.
+700 printed words hard, 699 budgeted. Everything that prints counts, including chip labels,
+diagram node labels, captions and the identity line. Fixed furniture the renderer emits does not
+count: section headings, the `Fig 1.` prefix, the `WHAT IS IT?` label. `check.py` is the
+authority; this table is the guide for how to spend it.
 
 | Section | Words | Must answer |
 |---|---|---|
-| Title, one-liner, chips, result | 60 | What it is in plain language; role, timeline, status, scale, stack |
+| Title, one-liner, chips, result | 60 | What it is in plain language; timeline, status, scale, stack |
+| Identity, printed twice | 14 | Name, email, link, in the byline and the footer |
 | Problem | 75 | Who was hurting, what it cost in time, money, or risk |
 | Architecture prose | 190 | Named components, boundaries, data flow, model-driven vs deterministic |
 | Diagram labels + Fig 1 caption | 55 | The topology, and what the reader should notice |
-| Screenshot captions | 50 | What each screen proves |
+| Gallery captions | 50 | What each screen proves, one sentence each, 14 words maximum |
 | Decisions and tradeoffs | 140 | 3 to 4 bullets, each "chose X over Y because Z" |
 | Impact | 85 | Before and after, adoption, who uses it now |
-| Limits and next step | 30 | One constraint and the fix |
-| Footer | 7 | Name, email, link |
+| Out-of-Scope | 30 | What you left out on purpose, then the one real constraint |
 
-The budget is rarely the binding constraint. The worked example lands at 464 of 700 and reads as
+The budget is rarely the binding constraint. The worked example lands well under 700 and reads as
 complete. Page count is the real limit, so a short honest overview beats a padded one.
 
 ## Rules that fail the build
@@ -192,6 +208,7 @@ Do not fight these, they are checked:
   `utilize`. Say what it actually does instead.
 - 12 diagram nodes maximum, 2 to 4 tiers, exactly one `core` node.
 - 5 chips maximum.
+- `gallery` holds 2 to 5 images, and no caption exceeds 14 words.
 - The rendered file must fetch nothing. The renderer guarantees this; do not add a `<link>`, an
   `@import`, or a remote image.
 
