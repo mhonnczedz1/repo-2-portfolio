@@ -123,12 +123,12 @@
   ],
   "gallery": [
     {
-      "src": "images/01-ingest.png",
-      "caption": "Ingest returns the chunk count and the namespace it wrote to."
+      "src": "images/01-ask.png",
+      "caption": "Asking a namespace returns a grounded answer, with retrieval depth set per request."
     },
     {
-      "src": "images/02-namespaces.png",
-      "caption": "The same question in two namespaces returns only that tenant's documents."
+      "src": "images/02-knowledge-base.png",
+      "caption": "Every namespace lists its chunks, so a wrong answer stays traceable."
     }
   ],
   "out_of_scope": [

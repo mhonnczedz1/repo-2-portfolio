@@ -10,12 +10,13 @@ FIXTURES = ROOT / "tests" / "fixtures"
 
 # Version 3 compares the renderer against its own committed snapshot, so the version 1
 # bridging normalisations (placeholder spans, footer flattening) are gone. What remains
-# tolerates images arriving later: a real screenshot replaces a named slot with an <img>,
-# and neither should fail a design snapshot.
+# makes the snapshot independent of whether images exist yet: a real screenshot becomes a
+# zoom anchor wrapping an <img> plus a close link, and a missing one becomes a named slot.
+# Both reduce to the same figure, so adding screenshots is not a design change.
 NOISE = (
+    re.compile(r'<a class="(?:zoom|close)"[^>]*>.*?</a>', re.S),
     re.compile(r"<img\b[^>]*>", re.S),
     re.compile(r'<div class="slot">.*?</div>', re.S),
-    re.compile(r'<a class="(?:zoom|close)"[^>]*>|</a>', re.S),
 )
 
 
