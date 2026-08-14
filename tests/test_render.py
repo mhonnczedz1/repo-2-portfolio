@@ -1,4 +1,5 @@
 """The renderer turns content into markup, and never leaves a fetchable reference behind."""
+import re
 import unittest
 from pathlib import Path
 
@@ -144,6 +145,17 @@ class RenderDocumentTest(unittest.TestCase):
         self.assertNotIn("<link", self.doc)
         self.assertNotIn("@import", self.doc)
         self.assertNotIn('src="http', self.doc)
+
+    def test_every_src_is_a_data_uri(self):
+        """A relative src renders here and breaks the moment the file is sent anywhere."""
+        srcs = re.findall(r'src="([^"]*)"', self.doc)
+        self.assertTrue(srcs, "the fixture must exercise at least one image")
+        for src in srcs:
+            self.assertTrue(src.startswith("data:"), f"{src} would be fetched at open time")
+
+    def test_links_are_either_absolute_or_same_document(self):
+        for href in re.findall(r'href="([^"]*)"', self.doc):
+            self.assertTrue(href.startswith(("#", "http://", "https://", "mailto:")), href)
 
     def test_stylesheet_is_inlined(self):
         self.assertIn("@page{ size:A4", self.doc)
