@@ -78,3 +78,77 @@ def check_budgets(c: dict) -> list:
     if total > TOTAL:
         out.append(f"total: {total} words, hard limit {TOTAL}, over by {total - TOTAL}")
     return out
+
+
+BANNED = re.compile(
+    r"\b(robust\w*|seamless\w*|cutting-edge|leverag\w*|utilis\w*|utiliz\w*)\b", re.I)
+NODE_TYPES = {"core", "ext", "store", "ai"}
+
+
+def check_banned(c: dict) -> list:
+    out = []
+    for section, texts in section_texts(c).items():
+        for hit in BANNED.findall(" ".join(str(t) for t in texts if t)):
+            out.append(f"{section}: banned superlative {hit!r}, say what it actually does")
+    return out
+
+
+def check_decisions(c: dict) -> list:
+    out = []
+    for i, d in enumerate(c.get("decisions", []), 1):
+        for field in ("chose", "over", "because"):
+            if not str(d.get(field, "")).strip():
+                out.append(f"decision {i}: {field!r} is missing. "
+                           "A bullet with no rejected alternative is a fact, not a decision")
+    return out
+
+
+def check_diagram(c: dict, base: Path) -> list:
+    d = c.get("diagram") or {}
+    out = []
+    if d.get("mode") == "image":
+        if not (base / d.get("image", "")).is_file():
+            out.append(f"diagram: image {d.get('image')!r} not found")
+        return out
+
+    tiers = d.get("tiers") or []
+    if not 2 <= len(tiers) <= 4:
+        out.append(f"diagram: {len(tiers)} tiers, expected 2 to 4")
+    nodes = [n for tier in tiers for n in tier.get("nodes", [])]
+    if len(nodes) > 12:
+        out.append(f"diagram: {len(nodes)} nodes, more than 12 stops being readable at a glance")
+    cores = sum(1 for n in nodes if n.get("type") == "core")
+    if cores != 1:
+        out.append(f"diagram: found {cores} core nodes, expected exactly 1")
+    for n in nodes:
+        kind = n.get("type")
+        if kind and kind not in NODE_TYPES:
+            out.append(f"diagram: unknown node type {kind!r}, "
+                       f"expected one of {', '.join(sorted(NODE_TYPES))}")
+    return out
+
+
+def check_counts(c: dict) -> list:
+    out = []
+    if len(c.get("chips", [])) > 5:
+        out.append(f"chips: {len(c['chips'])}, keep it to 5")
+    if len(c.get("metrics", [])) == 1:
+        out.append("metrics: one tile looks like a stray number. Use 2, 3, or none")
+    return out
+
+
+def warnings(c: dict) -> list:
+    out = []
+    outstanding = sum(str(t).count(TODO) for texts in section_texts(c).values() for t in texts)
+    if outstanding:
+        out.append(f"{outstanding} unresolved {TODO} claim(s). Resolve or delete before sending")
+    if len(c.get("decisions", [])) > 4:
+        out.append(f"decisions: {len(c['decisions'])} bullets, 3 to 4 reads better")
+    shots = len(c.get("shots", []))
+    if shots and not 2 <= shots <= 3:
+        out.append(f"shots: {shots} screenshots, 2 or 3 earn the space")
+    for i, tier in enumerate((c.get("diagram") or {}).get("tiers", []), 1):
+        n = len(tier.get("nodes", []))
+        if not 3 <= n <= 5:
+            out.append(f"tier {i} ({tier.get('label')}): {n} nodes, 3 to 5 reads best")
+    return out
