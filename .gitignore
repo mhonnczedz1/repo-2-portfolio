@@ -3,10 +3,9 @@ config.json
 out/
 .tmp/
 
-# Screenshots belong to whoever's overviews these are, not to the tool. A missing
-# file renders as a named dashed box, so a fresh clone still lays out correctly.
-overviews/*/images/*
-!overviews/*/images/.gitkeep
+# Your overviews are yours: content and screenshots both. The skill generates this
+# directory on first run, and the repo ships samples/ to show what output looks like.
+overviews/
 
 # Working document: spec, plan and tracker
 PLAN.md

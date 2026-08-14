@@ -11,6 +11,15 @@ laptop in flight mode, with no server, no CDN and no broken images. It carries i
 The HTML is the primary artifact and is styled for a laptop or wide screen. A `@media print`
 block compacts it back onto two A4 pages for the PDF.
 
+## See the output first
+
+`samples/overview-example.html` is a rendered overview. Download it and open it, or clone and open
+it locally; it needs nothing else to render. Its screenshots are painted placeholders labelled as
+samples, not real product captures, and its gallery images expand when clicked.
+
+Regenerate it after any design change with `python3 tools/make_sample.py`. A test fails if it goes
+stale.
+
 ## Install
 
 Requires Python 3 and Claude Code. No packages, no build step, no virtualenv.
@@ -18,7 +27,7 @@ Requires Python 3 and Claude Code. No packages, no build step, no virtualenv.
 ```sh
 git clone <this-repo> project-overview
 cd project-overview
-python3 -m unittest discover -s tests -t .    # 114 tests, should pass immediately
+python3 -m unittest discover -s tests -t .    # 118 tests, should pass immediately
 ```
 
 The skill is project-scoped: it lives in `.claude/skills/project-overview/` and is discovered by
@@ -114,17 +123,23 @@ structured, `tools/check.py` fails the build on things a prose style guide could
 ```
 .claude/skills/project-overview/   SKILL.md and its references. The instructions Claude follows
 assets/          style.css (the single source of design) and the document shell
-tools/           render.py, check.py. Standard library only
-overviews/<slug>/  content.json and that project's images
-out/             the shareable artifacts (gitignored)
-tests/           114 tests, run with unittest
+tools/           render.py, check.py, make_sample.py. Standard library only
+samples/         a rendered example, so you can see the output without running anything
+overviews/<slug>/  your content.json and screenshots. Generated on first run, gitignored
+out/             your rendered artifacts. Gitignored
+tests/           118 tests, run with unittest
+tests/fixtures/  valid.json, the example content the repo tracks and the sample renders from
 tests/golden/    the committed design snapshot
 ```
 
-`tests/test_golden.py` renders a fixture and compares it against `tests/golden/design-snapshot.html`
-token for token, which catches a change to the renderer or the stylesheet that alters the design by
-accident. When the change is deliberate, regenerate it with `python3 -m tests.test_golden --write`
-and read the diff.
+Your overviews and their screenshots are yours, so `overviews/` and `out/` are gitignored. The
+skill creates what it needs. The repo tracks the tool, one example `content.json` under
+`tests/fixtures/`, and one rendered sample.
+
+`tests/test_golden.py` renders that fixture and compares it against
+`tests/golden/design-snapshot.html` token for token, which catches a change to the renderer or the
+stylesheet that alters the design by accident. When the change is deliberate, regenerate it with
+`python3 -m tests.test_golden --write` and read the diff.
 
 ## Exporting to PDF
 

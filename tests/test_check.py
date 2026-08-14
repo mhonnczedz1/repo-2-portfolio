@@ -1,6 +1,7 @@
 """The quality bar is enforced, not advised. Each test breaks exactly one rule."""
 import contextlib
 import io
+import json
 import unittest
 from pathlib import Path
 
@@ -233,7 +234,16 @@ class OutputTest(unittest.TestCase):
 
 
 class CliTest(unittest.TestCase):
-    SLUG = "multi-tenant-rag-api"
+    """overviews/ is gitignored and generated, so the CLI test brings its own content."""
+
+    SLUG = "cli-test-overview"
+
+    def setUp(self):
+        base = ROOT / "overviews" / self.SLUG
+        base.mkdir(parents=True, exist_ok=True)
+        src = base / "content.json"
+        src.write_text(json.dumps(content()), encoding="utf-8")
+        self.addCleanup(lambda: (src.unlink(missing_ok=True), base.rmdir()))
 
     def _run(self, *argv) -> tuple:
         buf = io.StringIO()
@@ -241,7 +251,7 @@ class CliTest(unittest.TestCase):
             code = main([*argv])
         return code, buf.getvalue()
 
-    def test_the_worked_example_passes(self):
+    def test_a_valid_overview_passes(self):
         code, out = self._run(self.SLUG)
         self.assertEqual(code, 0, out)
         self.assertIn("architecture", out)
