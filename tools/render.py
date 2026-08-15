@@ -37,13 +37,22 @@ def e(text) -> str:
     return html.escape(str(text), quote=True)
 
 
-def prose(text) -> str:
-    """Escape a paragraph, then honour `backticks` as inline code.
+_INLINE = re.compile(r"`([^`]+)`|\*\*([^*]+)\*\*")
 
-    content.json stays free of markup: backticks are notation, the same way they are
-    in markdown, and nothing else in the string is interpreted.
+
+def prose(text) -> str:
+    """Escape a paragraph, then honour `backticks` as code and **stars** as emphasis.
+
+    content.json stays free of markup: both are notation, the same way they are in
+    markdown, and nothing else in the string is interpreted. One pass over the string
+    handles both, so neither can be found inside the other's output.
     """
-    return re.sub(r"`([^`]+)`", r"<code>\1</code>", e(text))
+    def one(m) -> str:
+        if m.group(1) is not None:
+            return f"<code>{m.group(1)}</code>"
+        return f"<strong>{m.group(2)}</strong>"
+
+    return _INLINE.sub(one, e(text))
 
 
 def identity_parts(f: dict) -> list:

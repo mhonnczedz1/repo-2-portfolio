@@ -54,6 +54,9 @@
         background:var(--tint); border:1px solid var(--rule); border-radius:4px;
         padding:1px 5px; }
 
+  /* emphasis by weight and ink only, so it survives a greyscale print */
+  strong{ font-weight:650; color:var(--ink); }
+
   /* ---------- decisions ---------- */
   ul.decisions{ margin:0; padding:0; list-style:none; }
   ul.decisions li{ margin:0 0 13px; padding-left:16px; position:relative; break-inside:avoid; }
