@@ -11,6 +11,7 @@
     --tint:#f6f8fa; --accent:#7c3aed; --accent-tint:#f7f3ff; --warn:#b45309;
     --page:860px;          /* screen page width. Print ignores this and uses A4 */
     --gutter:68px;         /* diagram tier label column */
+    --frame:16/10;         /* gallery thumbnail box, shared by a shot and a missing slot */
   }
   @page{ size:A4; margin:14mm; }
   *{ box-sizing:border-box; }
@@ -114,8 +115,12 @@
   .gallery.cols2{ grid-template-columns:repeat(2,1fr); }
   .gallery.cols3{ grid-template-columns:repeat(3,1fr); }
   .gallery figure{ margin:0; }
-  .shot img{ display:block; width:100%; height:auto; border:1px solid var(--rule);
-             border-radius:5px; }
+  /* every shot fills the same frame, so captures of different sizes still line up and their
+     captions start on the same line. A wider capture loses its margins, not its content, and
+     the uncropped image is one click away */
+  .shot img{ display:block; width:100%; height:auto; aspect-ratio:var(--frame);
+             object-fit:cover; object-position:top; background:var(--tint);
+             border:1px solid var(--rule); border-radius:5px; }
 
   /* expandable, with no JavaScript: :target lifts the same img into a fixed overlay,
      so the base64 payload is never duplicated */
@@ -125,12 +130,14 @@
   .shot:target .close{ display:block; position:fixed; inset:0; z-index:60; cursor:zoom-out;
                        background:rgba(16,18,22,.9); color:#fff; font-size:9pt; text-align:right;
                        padding:18px 26px; text-decoration:none; border:0; }
+  /* expanded, the frame comes off: natural ratio, whole image, nothing cropped */
   .shot:target img{ position:fixed; z-index:61; top:50%; left:50%;
                     transform:translate(-50%,-50%); width:auto; max-width:94vw; max-height:92vh;
+                    aspect-ratio:auto; object-fit:contain; background:none;
                     border-radius:6px; border-color:transparent;
                     box-shadow:0 24px 60px rgba(0,0,0,.5); pointer-events:none; }
   /* a missing file still holds its slot, so a half-finished overview lays out correctly */
-  .slot{ display:flex; align-items:center; justify-content:center; aspect-ratio:16/10;
+  .slot{ display:flex; align-items:center; justify-content:center; aspect-ratio:var(--frame);
          padding:10px; border:1px dashed #b9c0c9; border-radius:5px; background:var(--tint);
          font:8.5pt ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted);
          text-align:center; }
@@ -191,10 +198,11 @@
     figcaption{ font-size:8pt; margin-top:5px; }
     .gallery{ gap:12px 10px; }
     ul.bullets li{ margin:0 0 6px; padding-left:13px; }
-    /* an expanded image must never reach the PDF */
+    /* an expanded image must never reach the PDF, and prints back into its own frame */
     .shot .zoom{ cursor:auto; }
     .shot .close{ display:none !important; }
-    .shot:target img{ position:static; transform:none; max-width:100%; max-height:none;
+    .shot:target img{ position:static; transform:none; width:100%; max-width:100%; max-height:none;
+                      aspect-ratio:var(--frame); object-fit:cover;
                       border-color:var(--rule); box-shadow:none; border-radius:5px; }
 
     footer{ margin-top:22px; padding-top:8px; font-size:8pt; gap:3px; }

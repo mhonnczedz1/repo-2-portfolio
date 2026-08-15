@@ -23,6 +23,12 @@ def print_rules(css: str) -> str:
     return css[i:]
 
 
+def block_of(css: str, selector: str) -> str:
+    """The declarations of one rule, so a test reads the rule it means and not the whole sheet."""
+    i = css.index(selector)
+    return css[i:css.index("}", i)]
+
+
 class StylesheetTest(unittest.TestCase):
     def test_screen_page_width_is_a_variable(self):
         """Three elements share the page width, so it cannot live in one of them."""
@@ -50,6 +56,21 @@ class StylesheetTest(unittest.TestCase):
         css = sheet()
         self.assertIn(".gallery.cols2{", css)
         self.assertIn(".gallery.cols3{", css)
+
+    def test_every_shot_fills_one_frame(self):
+        """Captures of different aspect ratios must not read as different sized windows."""
+        css = sheet()
+        self.assertRegex(css, r"--frame:\s*\d+/\d+")
+        shot = block_of(css, "  .shot img{")
+        self.assertIn("aspect-ratio:var(--frame)", shot)
+        self.assertIn("object-fit:cover", shot)
+        self.assertIn("aspect-ratio:var(--frame)", block_of(css, "  .slot{"),
+                      "a slot holds a shot's place, so it has to hold the same shape")
+
+    def test_an_expanded_image_drops_the_frame(self):
+        """Cropping a thumbnail to fit is fine. Cropping the image someone opened is not."""
+        screen = sheet()[:sheet().index("@media print{")]
+        self.assertIn("aspect-ratio:auto", block_of(screen, "  .shot:target img{"))
 
     def test_images_expand_without_javascript(self):
         css = sheet()
