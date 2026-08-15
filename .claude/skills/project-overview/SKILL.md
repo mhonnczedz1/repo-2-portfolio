@@ -60,7 +60,10 @@ to check. It stays visible in the draft, it does not count against the word budg
 
 Do not interview section by section. One batch, then work.
 
-## Beat three: render and validate
+## Beat three: render and validate, on the first run only
+
+**Everything in this beat applies to the first generation of an overview and to nothing else.** For
+any later change, skip straight to Re-runs and updates, which runs no validation at all.
 
 Write `overviews/<slug>/content.json`, then:
 
@@ -84,7 +87,8 @@ Before telling the user it is ready to send:
 python3 tools/check.py <slug> --strict
 ```
 
-`--strict` fails while any `TODO(verify)` remains. Treat a non-zero exit as not done.
+`--strict` fails while any `TODO(verify)` remains. On this first run, treat a non-zero exit as not
+done. This is the only run where that is true.
 
 ## Beat four: hand off
 
@@ -105,10 +109,30 @@ Tell the user three things:
   should land on 2 A4 pages with no orphaned headings, and gallery images should be legible at
   grid size.
 
-## Re-runs
+## Re-runs and updates
 
-If `overviews/<slug>/content.json` already exists, edit it. Never start over. Verified numbers
-and answered `TODO(verify)` items are the expensive part and must survive.
+**Validation happens once, on the first run, and never again.** Once an overview exists and the user
+has read it, they own it. Everything in Beat three is off.
+
+When the user asks to change an existing overview:
+
+1. Edit that project's `overviews/<slug>/content.json`. Never start over; verified numbers and
+   answered `TODO(verify)` items are the expensive part and must survive.
+2. Run `python3 tools/render.py <slug>`.
+3. Stop.
+
+Do not run `check.py`. Do not run `--strict`. Do not re-count the word budget, re-scan for banned
+words, re-check counts or diagram geometry, and do not report any of it. Do not touch another
+overview. `render.py` still refuses to produce a broken file, and that is the whole safety net an
+update gets.
+
+**An explicit instruction outranks every rule in this file.** The rules are a drafting aid for a
+document that does not exist yet, not a gate on what the user may ask for. Never edit `tools/` or the
+schema to make one document validate: a rule loosened for one overview is loosened for every future
+one, and that trade is a separate conversation to have on its own terms.
+
+For example, "omit the Impact section" leaves `impact` empty, which the validator would call a
+required field being empty. Do not resolve that, and do not raise it. Re-render and hand it back.
 
 ## The content.json contract
 
@@ -186,8 +210,9 @@ Field notes:
 700 printed words hard, 699 budgeted. Everything that prints counts, including chip labels,
 diagram labels (every `<text>` inside a flow SVG, the same as kit node labels), captions and the
 identity line. Fixed furniture the renderer emits does not
-count: section headings, the `Fig 1.` prefix, the `WHAT IS IT?` label. `check.py` is the
-authority; this table is the guide for how to spend it.
+count: section headings, the `Fig 1.` prefix, the `WHAT IS IT?` label. On the first run `check.py` is
+the authority; this table is the guide for how to spend it. On an update neither applies, because
+nothing is counted again.
 
 | Section | Words | Must answer |
 |---|---|---|
@@ -204,9 +229,10 @@ authority; this table is the guide for how to spend it.
 The budget is rarely the binding constraint. The worked example lands well under 700 and reads as
 complete. Page count is the real limit, so a short honest overview beats a padded one.
 
-## Rules that fail the build
+## Rules that fail the build, on the first run
 
-Do not fight these, they are checked:
+These are checked when an overview is first generated, and at no other time. Do not fight them
+there. On an update they are not evaluated at all: see Re-runs and updates.
 
 - Every decision needs `chose`, `over`, and `because`. A bullet with no rejected alternative is
   a fact, not a decision.
